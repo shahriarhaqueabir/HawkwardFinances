@@ -170,6 +170,89 @@ function loadFromIndexedDB(storeName, key = null) {
     });
 }
 
+// ==================== DATA IMPORT/EXPORT ====================
+
+/**
+ * Export all data from server as a JSON file
+ */
+async function exportData() {
+    try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Failed to fetch data');
+        
+        const data = await response.json();
+        const dataStr = JSON.stringify(data, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `financial_backup_${new Date().toISOString().split('T')[0]}.json`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        notify('✅ Data exported successfully!', NOTIFICATION_TYPES.SUCCESS);
+    } catch (err) {
+        console.error('Export Error:', err);
+        notify('❌ Export failed: ' + err.message, NOTIFICATION_TYPES.ERROR);
+    }
+}
+
+/**
+ * Import data from a JSON file and overwrite current data
+ */
+async function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const importContent = JSON.parse(e.target.result);
+            
+            // Basic validation
+            if (!importContent.accounts || !importContent.profile || !importContent.timeline) {
+                throw new Error('Invalid backup file format. Missing required data sections.');
+            }
+
+            const confirmImport = confirm('🚨 WARNING: Importing will OVERWRITE all current data. Are you sure you want to proceed?');
+            if (!confirmImport) {
+                event.target.value = ''; // Reset file input
+                return;
+            }
+
+            notify('⌛ Importing data...', NOTIFICATION_TYPES.INFO);
+
+            const response = await fetch('http://localhost:3000/api/import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(importContent)
+            });
+
+            if (!response.ok) throw new Error('Server import failed');
+
+            const result = await response.json();
+            notify('✅ Success: ' + result.message, NOTIFICATION_TYPES.SUCCESS);
+            
+            // Reload page to show new data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+
+        } catch (err) {
+            console.error('Import Error:', err);
+            notify('❌ Import failed: ' + err.message, NOTIFICATION_TYPES.ERROR);
+            event.target.value = ''; // Reset file input
+        }
+    };
+    reader.readAsText(file);
+}
+
 // ==================== UTILITY FUNCTIONS ====================
 
 function convertAccountsToObjects(accountsArray) {

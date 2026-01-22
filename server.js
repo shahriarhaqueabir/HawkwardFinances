@@ -106,6 +106,33 @@ app.post('/api/data', (req, res) => {
     });
 });
 
+// Import full backup
+app.post('/api/import', (req, res) => {
+    const importData = req.body;
+
+    // Basic validation
+    if (!importData || typeof importData !== 'object') {
+        return res.status(400).json({ error: 'Invalid data format' });
+    }
+
+    // Ensure required top-level keys exist (even if empty)
+    const requiredKeys = ['accounts', 'profile', 'timeline'];
+    requiredKeys.forEach(key => {
+        if (!importData[key]) {
+            if (key === 'accounts') importData[key] = [];
+            else importData[key] = {};
+        }
+    });
+
+    fs.writeFile(DATA_FILE, JSON.stringify(importData, null, 2), (writeErr) => {
+        if (writeErr) {
+            console.error('Import Error:', writeErr);
+            return res.status(500).json({ error: 'Failed to import data' });
+        }
+        res.json({ success: true, message: 'Data imported successfully' });
+    });
+});
+
 // Invoke dynamic import inside the async function
 app.listen(PORT, async () => {
     console.log(`Server running at http://localhost:${PORT}`);
