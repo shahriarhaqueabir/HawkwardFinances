@@ -27,16 +27,18 @@
             </button>
           </li>
           <li>
-            <button class="nav-btn" data-tab="accounts">� Expenses</button>
+            <button class="nav-btn" data-tab="accounts">
+              📋 Expenses
+            </button>
           </li>
           <li>
             <button class="nav-btn" data-tab="timeline">
-              � Timeline
+              📅 Timeline
             </button>
           </li>
           <li>
             <button class="nav-btn" data-tab="analytics">
-              � Reports
+              📊 Reports
             </button>
           </li>
         </ul>
@@ -51,9 +53,9 @@
         <div class="content-area">
           <!-- TAB: My Profile -->
           <div id="profile" class="tab-content active">
-            <h2 class="page-title-section">� My Cards</h2>
+            <h2 class="page-title-section">👤 My Cards</h2>
             <p class="page-description">Create and manage your profile cards</p>
-            <div style="margin-bottom: 20px">
+            <div class="mb-20">
               <button class="btn-primary" onclick="showCreateCardModal()">
                 ➕ Create New Card
               </button>
@@ -66,20 +68,16 @@
             <h2 class="page-title-section" id="timelineTitle">
               3-Year Financial Timeline
             </h2>
-            <div style="margin-bottom: 20px">
-              <label style="font-weight: 600; margin-right: 10px"
+            <div class="mb-20">
+              <label class="font-bold mr-10"
                 >Starting Balance (€):</label
               >
               <input
                 type="number"
                 id="startingBalanceInput"
                 step="0.01"
-                style="
-                  padding: 8px;
-                  border: 1px solid #cbd5e0;
-                  border-radius: 6px;
-                  width: 150px;
-                "
+                class="input-primary"
+                aria-label="Starting Balance"
               />
             </div>
 
@@ -165,6 +163,7 @@
                   id="categoryFilter"
                   onchange="filterAccounts()"
                   class="form-filter"
+                  aria-label="Filter by Category"
                 >
                   <option value="">All Categories</option>
                   <option value="Government & Legal">Government & Legal</option>
@@ -215,56 +214,56 @@
                     <th
                       onclick="sortTable('id')"
                       data-sort="id"
-                      style="cursor: pointer"
+                      class="cursor-pointer"
                     >
                       # ↕
                     </th>
                     <th
                       onclick="sortTable('name')"
                       data-sort="name"
-                      style="cursor: pointer"
+                      class="cursor-pointer"
                     >
                       Service Name ↕
                     </th>
                     <th
                       onclick="sortTable('category')"
                       data-sort="category"
-                      style="cursor: pointer"
+                      class="cursor-pointer"
                     >
                       Category ↕
                     </th>
                     <th
                       onclick="sortTable('monthlyPayment')"
                       data-sort="monthlyPayment"
-                      style="cursor: pointer"
+                      class="cursor-pointer"
                     >
                       Monthly ↕
                     </th>
                     <th
                       onclick="sortTable('annualPayment')"
                       data-sort="annualPayment"
-                      style="cursor: pointer"
+                      class="cursor-pointer"
                     >
                       Annual ↕
                     </th>
                     <th
                       onclick="sortTable('hasReminder')"
                       data-sort="hasReminder"
-                      style="cursor: pointer"
+                      class="cursor-pointer"
                     >
                       Paid? ↕
                     </th>
                     <th
                       onclick="sortTable('status')"
                       data-sort="status"
-                      style="cursor: pointer"
+                      class="cursor-pointer"
                     >
                       Status ↕
                     </th>
                     <th
                       onclick="sortTable('priority')"
                       data-sort="priority"
-                      style="cursor: pointer"
+                      class="cursor-pointer"
                     >
                       Criticality ↕
                     </th>
@@ -335,11 +334,11 @@
           <div class="modal-form" id="accountForm">
             <div class="form-group">
               <label>Service Name *</label>
-              <input type="text" id="formService" required />
+              <input type="text" id="formService" required aria-label="Service Name" />
             </div>
             <div class="form-group">
               <label>Category *</label>
-              <select id="formCategory" required>
+              <select id="formCategory" required aria-label="Service Category">
                 <option value="">Select Category</option>
                 <option>Government & Legal</option>
                 <option>Health & Insurance</option>
@@ -376,6 +375,7 @@
                 min="0"
                 step="0.01"
                 value="0"
+                aria-label="Monthly Cost"
               />
             </div>
             <div class="form-group">
@@ -386,11 +386,12 @@
                 min="0"
                 step="0.01"
                 value="0"
+                aria-label="Annual Cost"
               />
             </div>
             <div class="form-group">
               <label>Paid? *</label>
-              <select id="formPaid" required>
+              <select id="formPaid" required aria-label="Payment Status">
                 <option value="">Select Status</option>
                 <option value="Yes">Yes</option>
                 <option value="No">No</option>
@@ -398,7 +399,7 @@
             </div>
             <div class="form-group">
               <label>Status *</label>
-              <select id="formStatus" required>
+              <select id="formStatus" required aria-label="Account Status">
                 <option value="">Select Status</option>
                 <option value="Active">Active</option>
                 <option value="Planned">Planned</option>
@@ -408,7 +409,7 @@
             </div>
             <div class="form-group">
               <label>Criticality *</label>
-              <select id="formCriticality" required>
+              <select id="formCriticality" required aria-label="Criticality Level">
                 <option value="">Select Level</option>
                 <option value="Critical">Critical</option>
                 <option value="Essential">Essential</option>
