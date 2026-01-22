@@ -118,10 +118,10 @@ const CRITICALITY_LEVELS = ['Critical', 'Essential', 'Important', 'Optional'];
 
 // Tab Titles
 const TAB_TITLES = {
-    profile: '👤 My Profile',
-    timeline: '📅 2026 Timeline',
-    analytics: '📊 Account Overview',
-    accounts: '📋 All Accounts'
+    profile: '👤 Profiles',
+    timeline: '📅 Timeline',
+    analytics: '📊 Reports',
+    accounts: '📋 Expenses'
 };
 
 // Family Configuration

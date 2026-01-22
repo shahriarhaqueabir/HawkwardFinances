@@ -615,20 +615,36 @@ function deleteCard(cardId) {
 function createAccountRow(row, index) {
     const { id, name, category, monthlyPayment, annualPayment, hasReminder, status, priority } = row;
     const tr = document.createElement('tr');
-    const criticalityColor = getCriticalityColor(priority);
+    
+    // Convert status/paid/criticality to lowecase for CSS classes
+    const statusClass = `status-${status.toLowerCase()}`;
+    const paidClass = hasReminder === "Yes" ? "status-paid" : "status-unpaid";
+    const criticalityClass = `criticality-${priority.toLowerCase()}`;
 
     tr.innerHTML = `
-        <td>${id}</td>
-        <td><strong>${name}</strong></td>
-        <td>${category}</td>
-        <td>${TIMELINE_CONFIG.currency}${monthlyPayment.toFixed(2)}</td>
-        <td>${TIMELINE_CONFIG.currency}${annualPayment.toFixed(2)}</td>
-        <td>${hasReminder === "Yes" ? "✅" : "❌"}</td>
-        <td>${status}</td>
-        <td><span style="background: ${criticalityColor}; padding: 4px 8px; border-radius: 4px;">${priority}</span></td>
-        <td>
-            <button class="btn-small edit" onclick="editAccount(${index})" aria-label="Edit ${name}">✏️</button>
-            <button class="btn-small delete" onclick="deleteAccount(${index})" aria-label="Delete ${name}">🗑️</button>
+        <td class="col-id">${id}</td>
+        <td class="col-service">
+            <div class="service-info">
+                <span class="service-name">${name}</span>
+                <span class="badge badge-outline category-badge">${category}</span>
+            </div>
+        </td>
+        <td class="col-cost tabular">${TIMELINE_CONFIG.currency}${monthlyPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td class="col-cost tabular">${TIMELINE_CONFIG.currency}${annualPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td class="col-paid">
+            <span class="badge ${paidClass}">${hasReminder === "Yes" ? "PAID" : "UNPAID"}</span>
+        </td>
+        <td class="col-status">
+            <span class="badge ${statusClass}">${status}</span>
+        </td>
+        <td class="col-criticality">
+            <span class="badge ${criticalityClass}">${priority}</span>
+        </td>
+        <td class="col-actions">
+            <div class="table-actions">
+                <button class="btn-icon edit" onclick="editAccount(${index})" title="Edit ${name}">✏️</button>
+                <button class="btn-icon delete" onclick="deleteAccount(${index})" title="Delete ${name}">🗑️</button>
+            </div>
         </td>
     `;
     return tr;
@@ -851,11 +867,10 @@ function initCharts() {
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
         console.warn('Chart.js not loaded. Charts will not be displayed.');
-        // Optional: Add UI feedback in chart containers?
         const chartContainers = document.querySelectorAll('canvas');
         chartContainers.forEach(canvas => {
             const parent = canvas.parentElement;
-            if(parent && !parent.querySelector('.chart-error-msg')) {
+            if (parent && !parent.querySelector('.chart-error-msg')) {
                 const msg = document.createElement('div');
                 msg.className = 'chart-error-msg';
                 msg.innerHTML = '<p style="text-align:center; padding: 20px; color: #718096; background: #f7fafc; border-radius: 8px;">📊 Charts unavailable (Library not loaded)</p>';
@@ -866,91 +881,212 @@ function initCharts() {
         return;
     }
 
-    // Destroy existing chart instances
-    if (categoryChartInstance) categoryChartInstance.destroy();
-    if (costChartInstance) costChartInstance.destroy();
-    if (criticalityChartInstance) criticalityChartInstance.destroy();
-    if (statusChartInstance) statusChartInstance.destroy();
-
-    const categoryData = {};
-    const costData = {};
-    const criticalityData = {};
-    const statusData = {};
+    // Aggregating Data
+    const categoryCounts = {};
+    const categoryCosts = {};
+    const criticalityCounts = {};
+    const statusCounts = {};
 
     accounts.forEach(acc => {
         const { category, monthlyPayment, status, priority } = acc;
-        categoryData[category] = (categoryData[category] || 0) + 1;
-        costData[category] = (costData[category] || 0) + monthlyPayment;
-        criticalityData[priority] = (criticalityData[priority] || 0) + 1;
-        statusData[status] = (statusData[status] || 0) + 1;
+        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+        categoryCosts[category] = (categoryCosts[category] || 0) + monthlyPayment;
+        criticalityCounts[priority] = (criticalityCounts[priority] || 0) + 1;
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
 
-    // Category Chart
+    // 1. Accounts by Category (Horizontal Bar - Sorted)
+    const sortedCategories = Object.entries(categoryCounts)
+        .sort((a, b) => b[1] - a[1]) // Sort desc by count
+        .slice(0, 15); // Top 15 categories
+
     const categoryCtx = document.getElementById('categoryChart');
     if (categoryCtx) {
-        categoryChartInstance = new Chart(categoryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: Object.keys(categoryData),
-                datasets: [{
-                    data: Object.values(categoryData),
-                    backgroundColor: COLORS.chartPalette
-                }]
-            },
-            options: { maintainAspectRatio: false }
-        });
+        if (categoryChartInstance) {
+            categoryChartInstance.data.labels = sortedCategories.map(i => i[0]);
+            categoryChartInstance.data.datasets[0].data = sortedCategories.map(i => i[1]);
+            categoryChartInstance.update();
+        } else {
+            categoryChartInstance = new Chart(categoryCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedCategories.map(i => i[0]),
+                    datasets: [{
+                        label: 'Number of Accounts',
+                        data: sortedCategories.map(i => i[1]),
+                        backgroundColor: COLORS.chartPalette,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal Bar
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }, // Hide legend for cleaner look
+                    scales: {
+                        x: { beginAtZero: true, grid: { display: false } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
     }
 
-    // Cost Chart
+    // 2. Monthly Cost Distribution (Horizontal Bar - Sorted by Cost)
+    const sortedCosts = Object.entries(categoryCosts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10); // Top 10 expensive categories
+
     const costCtx = document.getElementById('costChart');
     if (costCtx) {
-        costChartInstance = new Chart(costCtx, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(costData).slice(0, 8),
-                datasets: [{
-                    label: `Monthly Cost (${TIMELINE_CONFIG.currency})`,
-                    data: Object.values(costData).slice(0, 8),
-                    backgroundColor: COLORS.primary
-                }]
-            },
-            options: { maintainAspectRatio: false }
-        });
+        if (costChartInstance) {
+            costChartInstance.data.labels = sortedCosts.map(i => i[0]);
+            costChartInstance.data.datasets[0].data = sortedCosts.map(i => i[1]);
+            costChartInstance.update();
+        } else {
+            costChartInstance = new Chart(costCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedCosts.map(i => i[0]),
+                    datasets: [{
+                        label: `Monthly Cost (${TIMELINE_CONFIG.currency})`,
+                        data: sortedCosts.map(i => i[1]),
+                        backgroundColor: COLORS.primary,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal Bar for better readable labels
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
     }
 
-    // Criticality Chart
+    // 3. Criticality Levels (Vertical Bar)
     const criticalityCtx = document.getElementById('criticalityChart');
     if (criticalityCtx) {
-        criticalityChartInstance = new Chart(criticalityCtx, {
-            type: 'polarArea',
-            data: {
-                labels: Object.keys(criticalityData),
-                datasets: [{
-                    data: Object.values(criticalityData),
-                    backgroundColor: [COLORS.criticalBg, COLORS.essentialBg, COLORS.importantBg, COLORS.optionalBg]
-                }]
-            },
-            options: { maintainAspectRatio: false }
-        });
+        if (criticalityChartInstance) {
+            criticalityChartInstance.data.labels = Object.keys(criticalityCounts);
+            criticalityChartInstance.data.datasets[0].data = Object.values(criticalityCounts);
+            criticalityChartInstance.update();
+        } else {
+            criticalityChartInstance = new Chart(criticalityCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(criticalityCounts),
+                    datasets: [{
+                        label: 'Count',
+                        data: Object.values(criticalityCounts),
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)',  // Critical (Red)
+                            'rgba(245, 158, 11, 0.7)', // Essential (Orange)
+                            'rgba(99, 102, 241, 0.7)', // Important (Indigo)
+                            'rgba(148, 163, 184, 0.7)' // Optional (Slate)
+                        ],
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                generateLabels: (chart) => {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const ds = data.datasets[0];
+                                            return {
+                                                text: label,
+                                                fillStyle: ds.backgroundColor[i],
+                                                strokeStyle: ds.backgroundColor[i],
+                                                hidden: false, // Custom legend, simple display only
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
     }
 
-    // Status Chart
+    // 4. Account Status (Vertical Bar)
     const statusCtx = document.getElementById('statusChart');
     if (statusCtx) {
-        statusChartInstance = new Chart(statusCtx, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(statusData),
-                datasets: [{
-                    data: Object.values(statusData),
-                    backgroundColor: [COLORS.success, COLORS.warning, COLORS.info, COLORS.danger]
-                }]
-            },
-            options: { maintainAspectRatio: false }
-        });
+        if (statusChartInstance) {
+            // Update existing instance
+            statusChartInstance.data.labels = Object.keys(statusCounts);
+            statusChartInstance.data.datasets[0].data = Object.values(statusCounts);
+            statusChartInstance.update();
+        } else {
+            // Create new instance
+            statusChartInstance = new Chart(statusCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(statusCounts),
+                    datasets: [{
+                        label: 'Count',
+                        data: Object.values(statusCounts),
+                        backgroundColor: [
+                            COLORS.success, // Active
+                            COLORS.info,    // Planned
+                            COLORS.warning, // Dormant
+                            COLORS.danger   // Cancelled
+                        ],
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                generateLabels: (chart) => {
+                                    const data = chart.data;
+                                    if (data.labels.length && data.datasets.length) {
+                                        return data.labels.map((label, i) => {
+                                            const ds = data.datasets[0];
+                                            return {
+                                                text: label,
+                                                fillStyle: ds.backgroundColor[i],
+                                                strokeStyle: ds.backgroundColor[i],
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                    return [];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
     }
 
-    // Update stats as well
     updateStats();
 }
 

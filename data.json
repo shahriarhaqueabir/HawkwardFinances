@@ -959,7 +959,27 @@
     }
   ],
   "profile": {
-    "cards": []
+    "cards": [
+      {
+        "id": "card_1769082468127",
+        "type": "adult",
+        "emoji": "👨",
+        "displayName": "Dad",
+        "fullName": "Abir",
+        "dateOfBirth": "1990-09-26",
+        "job": "Software Consultant and Technical Support Specialist",
+        "income": "70000"
+      },
+      {
+        "id": "card_1769082534972",
+        "type": "pet",
+        "emoji": "🐕",
+        "displayName": "Dog",
+        "fullName": "Nuka",
+        "dateOfBirth": "2023-03-01",
+        "breed": "German Shepherd/Border Collie"
+      }
+    ]
   },
   "timeline": {
     "timelineData": {
@@ -979,7 +999,7 @@
           "month": "February",
           "display": "2025 - February",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-March",
@@ -987,7 +1007,7 @@
           "month": "March",
           "display": "2025 - March",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-April",
@@ -995,7 +1015,7 @@
           "month": "April",
           "display": "2025 - April",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-May",
@@ -1003,7 +1023,7 @@
           "month": "May",
           "display": "2025 - May",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-June",
@@ -1011,7 +1031,7 @@
           "month": "June",
           "display": "2025 - June",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-July",
@@ -1019,7 +1039,7 @@
           "month": "July",
           "display": "2025 - July",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-August",
@@ -1027,7 +1047,7 @@
           "month": "August",
           "display": "2025 - August",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-September",
@@ -1035,7 +1055,7 @@
           "month": "September",
           "display": "2025 - September",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-October",
@@ -1043,7 +1063,7 @@
           "month": "October",
           "display": "2025 - October",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-November",
@@ -1051,7 +1071,7 @@
           "month": "November",
           "display": "2025 - November",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2025-December",
@@ -1059,7 +1079,7 @@
           "month": "December",
           "display": "2025 - December",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-January",
@@ -1067,7 +1087,7 @@
           "month": "January",
           "display": "2026 - January",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-February",
@@ -1075,7 +1095,7 @@
           "month": "February",
           "display": "2026 - February",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-March",
@@ -1083,7 +1103,7 @@
           "month": "March",
           "display": "2026 - March",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-April",
@@ -1091,7 +1111,7 @@
           "month": "April",
           "display": "2026 - April",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-May",
@@ -1099,7 +1119,7 @@
           "month": "May",
           "display": "2026 - May",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-June",
@@ -1107,7 +1127,7 @@
           "month": "June",
           "display": "2026 - June",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-July",
@@ -1115,7 +1135,7 @@
           "month": "July",
           "display": "2026 - July",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-August",
@@ -1123,7 +1143,7 @@
           "month": "August",
           "display": "2026 - August",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-September",
@@ -1131,7 +1151,7 @@
           "month": "September",
           "display": "2026 - September",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-October",
@@ -1139,7 +1159,7 @@
           "month": "October",
           "display": "2026 - October",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-November",
@@ -1147,7 +1167,7 @@
           "month": "November",
           "display": "2026 - November",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2026-December",
@@ -1155,7 +1175,7 @@
           "month": "December",
           "display": "2026 - December",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2027-January",
@@ -1163,7 +1183,7 @@
           "month": "January",
           "display": "2027 - January",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2027-February",
@@ -1171,7 +1191,7 @@
           "month": "February",
           "display": "2027 - February",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2027-March",
@@ -1179,79 +1199,79 @@
           "month": "March",
           "display": "2027 - March",
           "income": 1800,
-          "expenses": 0
+          "expenses": 1500
         },
         {
           "id": "2027-April",
           "year": 2027,
           "month": "April",
           "display": "2027 - April",
-          "income": 1800,
-          "expenses": 0
+          "income": 600,
+          "expenses": 1500
         },
         {
           "id": "2027-May",
           "year": 2027,
           "month": "May",
           "display": "2027 - May",
-          "income": 1800,
-          "expenses": 0
+          "income": 600,
+          "expenses": 1500
         },
         {
           "id": "2027-June",
           "year": 2027,
           "month": "June",
           "display": "2027 - June",
-          "income": 1800,
-          "expenses": 0
+          "income": 600,
+          "expenses": 1500
         },
         {
           "id": "2027-July",
           "year": 2027,
           "month": "July",
           "display": "2027 - July",
-          "income": 1800,
-          "expenses": 0
+          "income": 600,
+          "expenses": 1500
         },
         {
           "id": "2027-August",
           "year": 2027,
           "month": "August",
           "display": "2027 - August",
-          "income": 1800,
-          "expenses": 0
+          "income": 600,
+          "expenses": 1500
         },
         {
           "id": "2027-September",
           "year": 2027,
           "month": "September",
           "display": "2027 - September",
-          "income": 1800,
-          "expenses": 0
+          "income": 600,
+          "expenses": 1500
         },
         {
           "id": "2027-October",
           "year": 2027,
           "month": "October",
           "display": "2027 - October",
-          "income": 1800,
-          "expenses": 0
+          "income": 600,
+          "expenses": 1500
         },
         {
           "id": "2027-November",
           "year": 2027,
           "month": "November",
           "display": "2027 - November",
-          "income": 1800,
-          "expenses": 0
+          "income": 600,
+          "expenses": 1500
         },
         {
           "id": "2027-December",
           "year": 2027,
           "month": "December",
           "display": "2027 - December",
-          "income": 1800,
-          "expenses": 0
+          "income": 0,
+          "expenses": 1500
         }
       ]
     }
