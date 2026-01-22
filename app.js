@@ -254,6 +254,43 @@ function switchTab(tabName) {
 
 // ==================== CARD MANAGEMENT ====================
 
+const CARD_TEMPLATES = {
+    adult: {
+        label: 'Adult',
+        icon: '👨‍💼',
+        fields: [
+            { id: 'job', label: 'Occupation', type: 'text', placeholder: 'e.g. Software Engineer' },
+            { id: 'income', label: 'Annual Income', type: 'number', placeholder: 'e.g. 50000' }
+        ]
+    },
+    child: {
+        label: 'Child',
+        icon: '🧸',
+        fields: [
+            { id: 'school', label: 'School / Grade', type: 'text', placeholder: 'e.g. Elementary School' },
+            { id: 'interests', label: 'Interests', type: 'text', placeholder: 'e.g. Dinosaurs, Lego' }
+        ]
+    },
+    pet: {
+        label: 'Pet',
+        icon: '🐾',
+        fields: [
+            { id: 'breed', label: 'Breed', type: 'text', placeholder: 'e.g. Golden Retriever' },
+            { id: 'microchip', label: 'Microchip #', type: 'text', placeholder: 'e.g. 123456789' }
+        ]
+    }
+};
+
+const EMOJI_OPTIONS = [
+    '👨', '👩', '👴', '👵', '👦', '👧', '👶', 
+    '🐕', '🐈', '🐹', '🐰', '🦜', '🐠', 
+    '🦸', '🦹', '🧙', '🧚', '🧛', '🧜', '🧝',
+    '🤖', '👽', '👻', '👾'
+];
+
+let selectedTemplate = 'adult';
+let selectedEmoji = '👨';
+
 function renderCards() {
     const cardsGrid = document.getElementById('cardsGrid');
     if (!cardsGrid) return;
@@ -261,57 +298,81 @@ function renderCards() {
     cardsGrid.innerHTML = '';
 
     if (cards.length === 0) {
-        cardsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;">No cards yet. Click "Create New Card" to get started! 📇</p>';
+        cardsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096; font-size: 16px;">No profiles yet. Click "Create New Card" to add your family! 👨‍👩‍👧‍👦</p>';
         return;
     }
 
     cards.forEach(card => {
         const cardEl = document.createElement('div');
-        cardEl.className = 'family-card';
-        cardEl.style.borderColor = '#667eea';
+        // fallback to 'adult' style if type is missing (legacy support)
+        const cardType = card.type || 'adult'; 
+        cardEl.className = `family-card ${cardType}`;
 
-        let fieldsHTML = `
-            <div style="margin-bottom: 15px;">
-                <div style="font-size: 12px; color: #718096; text-transform: uppercase; font-weight: 600;">Display Name</div>
-                <div style="font-size: 15px; font-weight: 600; color: #2d3748;">${card.displayName}</div>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <div style="font-size: 12px; color: #718096; text-transform: uppercase; font-weight: 600;">Full Name</div>
-                <div style="font-size: 15px; font-weight: 600; color: #2d3748;">${card.fullName || '—'}</div>
-            </div>
-        `;
-
-        if (card.dateOfBirth) {
+        let fieldsHTML = '';
+        
+        // Add Specific Fields based on type
+        if (cardType === 'adult') {
             fieldsHTML += `
-                <div style="margin-bottom: 15px;">
-                    <div style="font-size: 12px; color: #718096; text-transform: uppercase; font-weight: 600;">Date of Birth</div>
-                    <div style="font-size: 15px; font-weight: 600; color: #2d3748;">${card.dateOfBirth}</div>
+                <div class="family-field">
+                    <label>Occupation</label>
+                    <div class="value">${card.job || '—'}</div>
+                </div>
+                <div class="family-field">
+                    <label>Income</label>
+                    <div class="value">${card.income ? TIMELINE_CONFIG.currency + parseInt(card.income).toLocaleString() : '—'}</div>
+                </div>
+            `;
+        } else if (cardType === 'child') {
+            fieldsHTML += `
+                <div class="family-field">
+                    <label>School</label>
+                    <div class="value">${card.school || '—'}</div>
+                </div>
+                <div class="family-field">
+                    <label>Interests</label>
+                    <div class="value">${card.interests || '—'}</div>
+                </div>
+            `;
+        } else if (cardType === 'pet') {
+            fieldsHTML += `
+                <div class="family-field">
+                    <label>Breed</label>
+                    <div class="value">${card.breed || '—'}</div>
+                </div>
+                <div class="family-field">
+                    <label>Microchip</label>
+                    <div class="value">${card.microchip || '—'}</div>
                 </div>
             `;
         }
 
-        if (card.customFields && card.customFields.length > 0) {
-            card.customFields.forEach(field => {
-                fieldsHTML += `
-                    <div style="margin-bottom: 15px;">
-                        <div style="font-size: 12px; color: #718096; text-transform: uppercase; font-weight: 600;">${field.label}</div>
-                        <div style="font-size: 15px; font-weight: 600; color: #2d3748;">${field.value || '—'}</div>
-                    </div>
-                `;
-            });
+        // Add Birthday if present
+        if (card.dateOfBirth) {
+            fieldsHTML += `
+                <div class="family-field">
+                    <label>Birthday</label>
+                    <div class="value">${new Date(card.dateOfBirth).toLocaleDateString()}</div>
+                </div>
+            `;
         }
 
         cardEl.innerHTML = `
+            <div class="card-actions">
+                <button class="action-btn" onclick="editCard('${card.id}')" title="Edit">✏️</button>
+                <button class="action-btn delete" onclick="deleteCard('${card.id}')" title="Delete">🗑️</button>
+            </div>
+            
             <div class="family-header">
-                <div>
-                    <span class="family-title">${card.displayName}</span>
-                </div>
-                <div>
-                    <button class="edit-btn-card" onclick="editCard('${card.id}')" aria-label="Edit ${card.displayName}">✏️ Edit</button>
-                    <button class="btn-small delete" onclick="deleteCard('${card.id}')" aria-label="Delete ${card.displayName}" style="margin-left: 8px;">🗑️</button>
+                <div class="family-info">
+                    <div class="family-emoji">${card.emoji || '👤'}</div>
+                    <div class="family-title-group">
+                        <span class="family-title">${card.displayName}</span>
+                        <span class="family-subtitle">${card.fullName || ''}</span>
+                    </div>
                 </div>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+
+            <div class="family-fields">
                 ${fieldsHTML}
             </div>
         `;
@@ -322,117 +383,197 @@ function renderCards() {
 
 function showCreateCardModal() {
     editingCardId = null;
-    currentCustomFields = [];
-    document.getElementById('cardModalTitle').textContent = '➕ Create New Card';
-    document.getElementById('cardDisplayName').value = '';
-    document.getElementById('cardFullName').value = '';
-    document.getElementById('cardDateOfBirth').value = '';
-    document.getElementById('customFieldsContainer').innerHTML = '';
+    selectedTemplate = 'adult';
+    selectedEmoji = '👨';
+    
+    document.getElementById('cardModalTitle').textContent = 'Create Profile Card';
+    
+    // Reset Template Selection UI
+    renderTemplateSelector();
+    
+    // Reset Emoji Grid
+    renderEmojiGrid();
+    
+    // Render Default Fields
+    renderFormFields();
+    
     document.getElementById('cardModal').classList.add('active');
+}
+
+function renderTemplateSelector() {
+    const container = document.getElementById('templateSelector');
+    if(!container) return;
+    
+    const options = container.querySelectorAll('.template-option');
+    options.forEach(opt => {
+        opt.classList.remove('selected');
+        // Simple text match or data attribute would be better, but relying on click handlers in HTML for now
+        // But to sync UI state:
+        const label = opt.querySelector('.template-label').textContent.toLowerCase();
+        if(label === selectedTemplate) {
+            opt.classList.add('selected');
+        }
+    });
+}
+
+function selectTemplate(type) {
+    selectedTemplate = type;
+    
+    // Update UI
+    const container = document.getElementById('templateSelector');
+    const options = container.querySelectorAll('.template-option');
+    options.forEach(opt => {
+        const label = opt.querySelector('.template-label').textContent.toLowerCase();
+        if(label === type) opt.classList.add('selected');
+        else opt.classList.remove('selected');
+    });
+
+    // Re-render fields
+    renderFormFields();
+}
+
+function renderEmojiGrid() {
+    const grid = document.getElementById('emojiGrid');
+    if(!grid) return;
+    
+    grid.innerHTML = '';
+    
+    EMOJI_OPTIONS.forEach(emoji => {
+        const el = document.createElement('div');
+        el.className = `emoji-option ${emoji === selectedEmoji ? 'selected' : ''}`;
+        el.textContent = emoji;
+        el.onclick = () => {
+            selectedEmoji = emoji;
+            renderEmojiGrid();
+        };
+        grid.appendChild(el);
+    });
+}
+
+function renderFormFields() {
+    const container = document.getElementById('cardForm');
+    if(!container) return;
+    
+    const template = CARD_TEMPLATES[selectedTemplate];
+    
+    // Base Fields
+    let html = `
+        <div class="form-group">
+            <label>Display Name *</label>
+            <input type="text" id="cardDisplayName" placeholder="e.g. Dad, Fluffy" value="${editingCardId ? (document.getElementById('cardDisplayName')?.value || '') : ''}">
+        </div>
+        <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="cardFullName" placeholder="e.g. John Doe" value="${editingCardId ? (document.getElementById('cardFullName')?.value || '') : ''}">
+        </div>
+        <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="cardDateOfBirth" value="${editingCardId ? (document.getElementById('cardDateOfBirth')?.value || '') : ''}">
+        </div>
+    `;
+    
+    // Template Specific Fields
+    template.fields.forEach(field => {
+        // Try to preserve value if switching back and forth or editing
+        // For simplicity in create mode, we wipe. In edit mode we map.
+        let value = ''; 
+        if(editingCardId) {
+             // Logic to retrieve existing value from DOM if we are re-rendering during edit would be complex 
+             // without state object. For now we assume re-render resets these fields unless we bind them.
+             // Better approach: State-driven.
+             // Since this is a simple app, let's just clear specific fields when switching templates.
+        }
+        
+        html += `
+            <div class="form-group">
+                <label>${field.label}</label>
+                <input type="${field.type}" id="card_${field.id}" placeholder="${field.placeholder}">
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
 }
 
 function closeCardModal() {
     document.getElementById('cardModal').classList.remove('active');
     editingCardId = null;
-    currentCustomFields = [];
-}
-
-function addCustomField() {
-    const fieldId = `custom_${Date.now()}`;
-    currentCustomFields.push({ id: fieldId, label: '', value: '' });
-    renderCustomFields();
-}
-
-function renderCustomFields() {
-    const container = document.getElementById('customFieldsContainer');
-    container.innerHTML = '';
-
-    currentCustomFields.forEach((field, index) => {
-        const fieldHTML = `
-            <div style="border: 1px solid #e0e0e0; padding: 15px; border-radius: 6px; margin-bottom: 10px;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                    <div class="form-group">
-                        <label>Field Label</label>
-                        <input type="text" placeholder="e.g., Phone" value="${field.label}" 
-                            onchange="currentCustomFields[${index}].label = this.value">
-                    </div>
-                    <div class="form-group">
-                        <label>Field Value</label>
-                        <input type="text" placeholder="Enter value" value="${field.value}" 
-                            onchange="currentCustomFields[${index}].value = this.value">
-                    </div>
-                </div>
-                <button class="btn-small delete" onclick="removeCustomField(${index})" style="width: 100%;">🗑️ Remove Field</button>
-            </div>
-        `;
-        container.innerHTML += fieldHTML;
-    });
-}
-
-function removeCustomField(index) {
-    currentCustomFields.splice(index, 1);
-    renderCustomFields();
 }
 
 function editCard(cardId) {
     const card = cards.find(c => c.id === cardId);
-    if (!card) {
-        notify('❌ Card not found', NOTIFICATION_TYPES.ERROR);
-        return;
-    }
+    if (!card) return;
 
     editingCardId = cardId;
-    currentCustomFields = JSON.parse(JSON.stringify(card.customFields || []));
+    selectedTemplate = card.type || 'adult';
+    selectedEmoji = card.emoji || '👤';
 
-    document.getElementById('cardModalTitle').textContent = `✏️ Edit Card: ${card.displayName}`;
-    document.getElementById('cardDisplayName').value = card.displayName;
-    document.getElementById('cardFullName').value = card.fullName;
-    document.getElementById('cardDateOfBirth').value = card.dateOfBirth || '';
-    renderCustomFields();
-    document.getElementById('cardModal').classList.add('active');
+    document.getElementById('cardModalTitle').textContent = 'Edit Profile Card';
+    
+    renderTemplateSelector();
+    renderEmojiGrid();
+    renderFormFields(); // This renders the inputs empty first
+
+    // Now populate values
+    setTimeout(() => {
+        if(document.getElementById('cardDisplayName')) document.getElementById('cardDisplayName').value = card.displayName || '';
+        if(document.getElementById('cardFullName')) document.getElementById('cardFullName').value = card.fullName || '';
+        if(document.getElementById('cardDateOfBirth')) document.getElementById('cardDateOfBirth').value = card.dateOfBirth || '';
+        
+        // Populate specific fields
+        const template = CARD_TEMPLATES[selectedTemplate];
+        template.fields.forEach(field => {
+            const input = document.getElementById(`card_${field.id}`);
+            if(input && card[field.id]) {
+                input.value = card[field.id];
+            }
+        });
+        
+        document.getElementById('cardModal').classList.add('active');
+    }, 0);
 }
 
 function saveCard() {
     const displayName = document.getElementById('cardDisplayName')?.value.trim();
     const fullName = document.getElementById('cardFullName')?.value.trim();
-    const dateOfBirth = document.getElementById('cardDateOfBirth')?.value.trim();
+    const dateOfBirth = document.getElementById('cardDateOfBirth')?.value;
 
     if (!displayName || !fullName) {
         notify('❌ Display Name and Full Name are required', NOTIFICATION_TYPES.ERROR);
         return;
     }
 
-    // Validate custom fields
-    const validCustomFields = currentCustomFields.filter(f => f.label && f.value);
+    // Collect specific fields
+    const templateFields = {};
+    CARD_TEMPLATES[selectedTemplate].fields.forEach(field => {
+        const val = document.getElementById(`card_${field.id}`)?.value;
+        if(val) templateFields[field.id] = val;
+    });
+
+    const newCardData = {
+        id: editingCardId || `card_${Date.now()}`,
+        type: selectedTemplate,
+        emoji: selectedEmoji,
+        displayName,
+        fullName,
+        dateOfBirth,
+        ...templateFields
+    };
 
     if (editingCardId) {
-        // Edit existing card
         const index = cards.findIndex(c => c.id === editingCardId);
         if (index !== -1) {
-            cards[index] = {
-                ...cards[index],
-                displayName,
-                fullName,
-                dateOfBirth,
-                customFields: validCustomFields
-            };
+            cards[index] = newCardData;
         }
     } else {
-        // Create new card
-        cards.push({
-            id: `card_${Date.now()}`,
-            displayName,
-            fullName,
-            dateOfBirth,
-            customFields: validCustomFields
-        });
+        cards.push(newCardData);
     }
 
     saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards')
         .then(() => {
             closeCardModal();
             renderCards();
-            notify(editingCardId ? '✅ Card updated successfully!' : '✅ Card created successfully!', NOTIFICATION_TYPES.SUCCESS);
+            notify(editingCardId ? '✅ Profile updated!' : '✅ Profile created!', NOTIFICATION_TYPES.SUCCESS);
         })
         .catch(err => {
             console.error('Save error:', err);
@@ -442,21 +583,17 @@ function saveCard() {
 
 function deleteCard(cardId) {
     const card = cards.find(c => c.id === cardId);
-    if (!card) {
-        notify('❌ Card not found', NOTIFICATION_TYPES.ERROR);
-        return;
-    }
+    if (!card) return;
 
-    if (confirm(`Delete "${card.displayName}"? This cannot be undone.`)) {
+    if (confirm(`Delete profile for "${card.displayName}"?`)) {
         cards = cards.filter(c => c.id !== cardId);
 
         saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards')
             .then(() => {
                 renderCards();
-                notify(`✅ Card deleted successfully!`, NOTIFICATION_TYPES.SUCCESS);
+                notify(`✅ Profile deleted!`, NOTIFICATION_TYPES.SUCCESS);
             })
             .catch(err => {
-                console.error('Delete error:', err);
                 notify(MESSAGES.saveError, NOTIFICATION_TYPES.WARNING);
             });
     }
