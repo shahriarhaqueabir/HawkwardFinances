@@ -237,19 +237,30 @@ navButtons.forEach(btn => {
 });
 
 function switchTab(tabName) {
-    tabContents.forEach(tab => tab.classList.remove('active'));
-    navButtons.forEach(btn => btn.classList.remove('active'));
+    try {
+        // Validation check
+        if (!TAB_TITLES || !TAB_TITLES[tabName]) {
+            console.error(`Invalid tab name: ${tabName}`);
+            return;
+        }
 
-    const tab = document.getElementById(tabName);
-    const btn = document.querySelector(`[data-tab="${tabName}"]`);
+        tabContents.forEach(tab => tab.classList.remove('active'));
+        navButtons.forEach(btn => btn.classList.remove('active'));
 
-    if (tab) tab.classList.add('active');
-    if (btn) btn.classList.add('active');
+        const tab = document.getElementById(tabName);
+        const btn = document.querySelector(`[data-tab="${tabName}"]`);
 
-    if (pageTitle) pageTitle.textContent = TAB_TITLES[tabName];
+        if (tab) tab.classList.add('active');
+        if (btn) btn.classList.add('active');
 
-    if (tabName === 'analytics') setTimeout(() => initCharts(), 100);
-    if (tabName === 'accounts') renderAccounts();
+        if (pageTitle) pageTitle.textContent = TAB_TITLES[tabName];
+
+        if (tabName === 'analytics') setTimeout(() => initCharts(), 100);
+        if (tabName === 'accounts') renderAccounts();
+    } catch (e) {
+        console.error('Error switching tabs:', e);
+        notify('⚠️ Error loading tab. Please refresh.', NOTIFICATION_TYPES.ERROR);
+    }
 }
 
 // ==================== CARD MANAGEMENT ====================
@@ -837,6 +848,24 @@ let criticalityChartInstance = null;
 let statusChartInstance = null;
 
 function initCharts() {
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js not loaded. Charts will not be displayed.');
+        // Optional: Add UI feedback in chart containers?
+        const chartContainers = document.querySelectorAll('canvas');
+        chartContainers.forEach(canvas => {
+            const parent = canvas.parentElement;
+            if(parent && !parent.querySelector('.chart-error-msg')) {
+                const msg = document.createElement('div');
+                msg.className = 'chart-error-msg';
+                msg.innerHTML = '<p style="text-align:center; padding: 20px; color: #718096; background: #f7fafc; border-radius: 8px;">📊 Charts unavailable (Library not loaded)</p>';
+                canvas.style.display = 'none';
+                parent.appendChild(msg);
+            }
+        });
+        return;
+    }
+
     // Destroy existing chart instances
     if (categoryChartInstance) categoryChartInstance.destroy();
     if (costChartInstance) costChartInstance.destroy();
@@ -1111,6 +1140,18 @@ function renderBalanceChart(timelineData) {
 
     if (!ctx) return;
 
+    if (typeof Chart === 'undefined') {
+        ctx.style.display = 'none';
+        const parent = ctx.parentElement;
+         if(parent && !parent.querySelector('.chart-error-msg')) {
+            const msg = document.createElement('div');
+            msg.className = 'chart-error-msg';
+            msg.innerHTML = '<p style="text-align:center; padding: 20px; color: #718096; background: #f7fafc; border-radius: 8px;">📈 Timeline Chart unavailable</p>';
+            parent.appendChild(msg);
+        }
+        return;
+    }
+
     if (window.balanceChartInstance) {
         window.balanceChartInstance.destroy();
     }
@@ -1166,6 +1207,12 @@ if (saveTimelineBtn) {
 }
 
 // ==================== INITIALIZATION ====================
+
+// Check critical dependencies
+if (typeof DB_CONFIG === 'undefined') {
+    alert('CRITICAL ERROR: Configuration file (config.js) not loaded! Application cannot start.');
+    throw new Error('Config missing');
+}
 
 initIndexedDB()
     .then(async () => {

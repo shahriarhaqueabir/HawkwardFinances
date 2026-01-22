@@ -959,44 +959,7 @@
     }
   ],
   "profile": {
-    "cards": [
-      {
-        "id": "card_1769077256050",
-        "displayName": "test",
-        "fullName": "test",
-        "dateOfBirth": "2026-01-22",
-        "customFields": [
-          {
-            "id": "custom_1769077253709",
-            "label": "test",
-            "value": "test"
-          }
-        ]
-      },
-      {
-        "id": "card_1769077271584",
-        "displayName": "test",
-        "fullName": "test",
-        "dateOfBirth": "2026-01-01",
-        "customFields": [
-          {
-            "id": "custom_1769077268555",
-            "label": "test",
-            "value": "test"
-          }
-        ]
-      },
-      {
-        "id": "card_1769078338115",
-        "type": "pet",
-        "emoji": "🐕",
-        "displayName": "fluffy",
-        "fullName": "the dog",
-        "dateOfBirth": "2024-03-01",
-        "breed": "German Shepherd",
-        "microchip": "123456"
-      }
-    ]
+    "cards": []
   },
   "timeline": {
     "timelineData": {
