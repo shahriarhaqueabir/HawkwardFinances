@@ -42,6 +42,21 @@
             </button>
           </li>
         </ul>
+
+        <!-- DATA MANAGEMENT SECTION -->
+        <div class="sidebar-footer">
+          <div class="sidebar-divider"></div>
+          <p class="sidebar-footer-title">💾 Data Management</p>
+          <div class="data-actions">
+            <button class="btn-sidebar-secondary" onclick="exportData()">
+              📤 Export JSON
+            </button>
+            <button class="btn-sidebar-secondary" onclick="document.getElementById('importFile').click()">
+              📥 Import JSON
+            </button>
+            <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)" aria-label="Import Data JSON File">
+          </div>
+        </div>
       </div>
 
       <!-- MAIN CONTENT -->
