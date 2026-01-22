@@ -289,6 +289,20 @@ tr:hover td {
 
 .btn-primary:active { transform: scale(0.98); }
 
+.btn-success {
+  background: var(--color-success);
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.btn-success:hover { filter: brightness(110%); }
+.btn-success:active { transform: scale(0.98); }
+
 /* ==================== CHARTS ==================== */
 .charts-grid {
     display: grid;
