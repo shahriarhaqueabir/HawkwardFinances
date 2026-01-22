@@ -108,66 +108,65 @@ accounts = convertAccountsToObjects(accounts);
 
 // ==================== INDEXEDDB MANAGEMENT ====================
 
+// ==================== LOCAL FILE STORAGE MANAGEMENT ====================
+
+const API_URL = 'http://localhost:3000/api/data';
+
 function initIndexedDB() {
+    // We check if server is reachable and load initial data
     return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_CONFIG.name, DB_CONFIG.version);
-
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            db = request.result;
-            resolve();
-        };
-
-        request.onupgradeneeded = (e) => {
-            const database = e.target.result;
-
-            if (!database.objectStoreNames.contains(DB_CONFIG.stores.accounts)) {
-                database.createObjectStore(DB_CONFIG.stores.accounts, { keyPath: 'id', autoIncrement: true });
-            }
-            if (!database.objectStoreNames.contains(DB_CONFIG.stores.profile)) {
-                database.createObjectStore(DB_CONFIG.stores.profile, { keyPath: 'key' });
-            }
-            if (!database.objectStoreNames.contains(DB_CONFIG.stores.timeline)) {
-                database.createObjectStore(DB_CONFIG.stores.timeline, { keyPath: 'key' });
-            }
-        };
+        fetch(API_URL)
+            .then(response => {
+                if (!response.ok) throw new Error('Server not reachable');
+                // Ensure the accounts array is populated from the server if empty logic is needed
+                // But typically loadFromIndexedDB handles the actual data loading into variables.
+                resolve();
+            })
+            .catch(err => {
+                console.error('Storage Init Error:', err);
+                notify('⚠️ Local server not running. Data will not save!', NOTIFICATION_TYPES.ERROR);
+                reject(err);
+            });
     });
 }
 
 function saveToIndexedDB(storeName, data, key = null) {
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction([storeName], 'readwrite');
-        const store = transaction.objectStore(storeName);
-        let dataToSave = data;
-
-        // For stores with keyPath: 'key', add the key property
-        if ((storeName === DB_CONFIG.stores.profile || storeName === DB_CONFIG.stores.timeline) && key) {
-            dataToSave = { key, data };
-        }
-
-        const request = store.put(dataToSave);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve();
+        fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ storeName, data, key })
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Save failed');
+                return response.json();
+            })
+            .then(() => resolve())
+            .catch(err => reject(err));
     });
 }
 
 function loadFromIndexedDB(storeName, key = null) {
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction([storeName], 'readonly');
-        const store = transaction.objectStore(storeName);
-        const request = key ? store.get(key) : store.getAll();
+        fetch(API_URL)
+            .then(response => response.json())
+            .then(fullData => {
+                const storeData = fullData[storeName];
 
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            const result = request.result;
-            // Extract data from wrapped objects if it has 'data' property
-            if (result && typeof result === 'object' && result.data &&
-                (storeName === DB_CONFIG.stores.profile || storeName === DB_CONFIG.stores.timeline)) {
-                resolve(result.data);
-            } else {
-                resolve(result);
-            }
-        };
+                if (!storeData) {
+                    resolve(null);
+                    return;
+                }
+
+                if ((storeName === DB_CONFIG.stores.profile || storeName === DB_CONFIG.stores.timeline) && key) {
+                    resolve(storeData[key]);
+                } else {
+                    resolve(storeData);
+                }
+            })
+            .catch(err => reject(err));
     });
 }
 
