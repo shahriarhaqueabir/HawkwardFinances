@@ -5,13 +5,23 @@
 
 // Database Configuration
 const DB_CONFIG = {
-    name: 'FinancialAppDB',
-    version: 2,
+    name: 'HawkwardFinances',
+    version: 42,
     stores: {
         accounts: 'accounts',
         profile: 'profile',
-        timeline: 'timeline'
+        timeline: 'timeline',
+        settings: 'settings'
     }
+};
+
+// Default Application Settings
+const DEFAULT_SETTINGS = {
+    theme: 'light',
+    primaryColor: '#6366f1',
+    currency: '€',
+    heartbeatTimeout: 15, // Seconds
+    autoShutdown: true
 };
 
 // Design System - Colors
@@ -76,8 +86,8 @@ const DESIGN = {
 
 // Timeline Configuration
 const TIMELINE_CONFIG = {
-    defaultStartingBalance: 2000,
-    defaultMonthlyIncome: 1800,
+    defaultStartingBalance: 0,
+    defaultMonthlyIncome: 0,
     currency: '€'
 };
 
@@ -86,7 +96,7 @@ const ACCOUNT_CATEGORIES = [
     'Government & Legal',
     'Health & Insurance',
     'Banking & Finance',
-    'Telecommunications',
+    'Utilities & Bills',
     'Shopping & E-Commerce',
     'Productivity & Work',
     'Developer Tools',
@@ -121,7 +131,8 @@ const TAB_TITLES = {
     profile: '👤 Profiles',
     timeline: '📅 Timeline',
     analytics: '📊 Reports',
-    accounts: '📋 Expenses'
+    accounts: '📋 Expenses',
+    settings: '⚙️ Settings'
 };
 
 // Family Configuration

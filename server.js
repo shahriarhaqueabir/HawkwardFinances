@@ -3,11 +3,44 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 // const open = require('open'); // Removed to use dynamic import
+
+function getLocalIp() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return 'localhost';
+}
+const LOCAL_IP = getLocalIp();
 
 const app = express();
 const PORT = 3000;
 const DATA_FILE = path.join(__dirname, 'data.json');
+
+// --- AUTO-SHUTDOWN LOGIC ---
+let shutdownTimer;
+let SHUTDOWN_TIMEOUT = 15000; // Default 15s, now dynamic
+let AUTO_SHUTDOWN_ENABLED = true;
+
+function resetShutdownTimer() {
+    if (!AUTO_SHUTDOWN_ENABLED) {
+        if (shutdownTimer) clearTimeout(shutdownTimer);
+        return;
+    }
+
+    if (shutdownTimer) clearTimeout(shutdownTimer);
+    shutdownTimer = setTimeout(() => {
+        console.log(`No heartbeat received for ${SHUTDOWN_TIMEOUT / 1500}s. Shutting down server...`);
+        process.exit(0);
+    }, SHUTDOWN_TIMEOUT);
+}
+// ---------------------------
 
 // Middleware
 app.use(cors());
@@ -28,22 +61,16 @@ if (!fs.existsSync(DATA_FILE)) {
 
 // Get all data
 app.get('/api/data', (req, res) => {
-    fs.readFile(DATA_FILE, 'utf8', (err, data) => {
-        if (err) {
-            console.error('Error reading data:', err);
-            return res.status(500).json({ error: 'Failed to read data' });
-        }
-        try {
-            res.json(JSON.parse(data));
-        } catch (parseError) {
-            console.error('Error parsing data:', parseError);
-            res.status(500).json({ error: 'Failed to parse data' });
-        }
-    });
+    try {
+        const data = fs.readFileSync(DATA_FILE, 'utf8');
+        res.json(JSON.parse(data));
+    } catch (err) {
+        console.error('Error reading/parsing data:', err);
+        res.status(500).json({ error: 'Failed to process data' });
+    }
 });
 
 // Save data (store-based)
-// Expects: { storeName: string, data: any, key: string (optional) }
 app.post('/api/data', (req, res) => {
     const { storeName, data, key } = req.body;
 
@@ -51,11 +78,8 @@ app.post('/api/data', (req, res) => {
         return res.status(400).json({ error: 'storeName is required' });
     }
 
-    fs.readFile(DATA_FILE, 'utf8', (readErr, fileContent) => {
-        if (readErr) {
-            return res.status(500).json({ error: 'Failed to read database' });
-        }
-
+    try {
+        const fileContent = fs.readFileSync(DATA_FILE, 'utf8');
         let dbData;
         try {
             dbData = JSON.parse(fileContent);
@@ -69,23 +93,13 @@ app.post('/api/data', (req, res) => {
             else dbData[storeName] = {};
         }
 
-        // Update logic mimicking the frontend intentions
-        // If it's the 'accounts' store, we usually replace the whole list or specific items.
-        // Based on app.js usage, it seems to pass the ENTIRE accounts array.
-        // So if storeName is 'accounts', we just replace it if data is an array.
-
         if (storeName === 'accounts') {
-            // If key is 'allAccounts', it means we are saving the whole list
             if (Array.isArray(data)) {
                 dbData[storeName] = data;
             } else {
-                // Fallback or specific item logic (not currently used by app.js apparently)
-                // But let's assume we might need to handle single item updates later?
-                // For now, app.js sends the whole array.
                 dbData[storeName] = data;
             }
         } else if (storeName === 'profile' || storeName === 'timeline') {
-            // These use keys inside the store
             if (key) {
                 if (!dbData[storeName]) dbData[storeName] = {};
                 dbData[storeName][key] = data;
@@ -93,22 +107,58 @@ app.post('/api/data', (req, res) => {
                 dbData[storeName] = data;
             }
         } else {
-            // Generic fallback
             dbData[storeName] = data;
         }
 
-        fs.writeFile(DATA_FILE, JSON.stringify(dbData, null, 2), (writeErr) => {
-            if (writeErr) {
-                return res.status(500).json({ error: 'Failed to save data' });
-            }
-            res.json({ success: true });
-        });
+        fs.writeFileSync(DATA_FILE, JSON.stringify(dbData, null, 2));
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error saving data:', err);
+        res.status(500).json({ error: 'Failed to save data' });
+    }
+});
+
+// Heartbeat endpoint to keep server alive
+app.post('/api/heartbeat', (req, res) => {
+    resetShutdownTimer();
+    res.json({ status: 'alive' });
+});
+
+// Update system settings (timeout & auto-shutdown)
+app.post('/api/settings/system', (req, res) => {
+    const { timeout, enabled } = req.body;
+    
+    if (timeout !== undefined) {
+        SHUTDOWN_TIMEOUT = parseInt(timeout) * 1000;
+        console.log(`System: Shutdown timeout updated to ${timeout}s`);
+    }
+    
+    if (enabled !== undefined) {
+        AUTO_SHUTDOWN_ENABLED = enabled;
+        console.log(`System: Auto-shutdown ${enabled ? 'ENABLED' : 'DISABLED'}`);
+    }
+    
+    resetShutdownTimer(); // Apply changes immediately
+    res.json({ 
+        success: true, 
+        timeout: SHUTDOWN_TIMEOUT / 1000, 
+        enabled: AUTO_SHUTDOWN_ENABLED 
     });
 });
 
 // Invoke dynamic import inside the async function
 app.listen(PORT, async () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    console.log(`\x1b[32m%s\x1b[0m`, `--------------------------------------------------`);
+    console.log(`\x1b[32m%s\x1b[0m`, `🚀 Hawkward Server is running!`);
+    console.log(`\x1b[32m%s\x1b[0m`, `--------------------------------------------------`);
+    console.log(`Local Access:   http://localhost:${PORT}`);
+    console.log(`Network Access: http://${LOCAL_IP}:${PORT}`);
+    console.log(`--------------------------------------------------`);
+    console.log(`Auto-shutdown active: Server will exit ${SHUTDOWN_TIMEOUT / 1000}s after tab is closed.`);
+    
+    // Start initial shutdown timer
+    resetShutdownTimer();
+
     // Open the browser
     try {
         // Dynamic import for 'open' (ESM-only package)
