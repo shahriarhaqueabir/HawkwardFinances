@@ -25,21 +25,28 @@ const DATA_FILE = path.join(__dirname, 'data.json');
 
 // --- AUTO-SHUTDOWN LOGIC ---
 let shutdownTimer;
-let SHUTDOWN_TIMEOUT = 15000; // Default 15s, now dynamic
+let SHUTDOWN_TIMEOUT = 10000; // 10 seconds after last heartbeat
 let AUTO_SHUTDOWN_ENABLED = true;
 
 function resetShutdownTimer() {
-    if (!AUTO_SHUTDOWN_ENABLED) {
-        if (shutdownTimer) clearTimeout(shutdownTimer);
-        return;
-    }
+  if (shutdownTimer) clearTimeout(shutdownTimer);
+  if (!AUTO_SHUTDOWN_ENABLED) return;
 
-    if (shutdownTimer) clearTimeout(shutdownTimer);
-    shutdownTimer = setTimeout(() => {
-        console.log(`No heartbeat received for ${SHUTDOWN_TIMEOUT / 1500}s. Shutting down server...`);
-        process.exit(0);
-    }, SHUTDOWN_TIMEOUT);
+  shutdownTimer = setTimeout(() => {
+    console.log("No active tab detected. Shutting down...");
+    process.exit(0);
+  }, SHUTDOWN_TIMEOUT);
 }
+
+// Heartbeat endpoint
+app.post("/api/heartbeat", (req, res) => {
+  resetShutdownTimer();
+  res.json({ status: "alive" });
+});
+
+// Start the timer immediately
+resetShutdownTimer();
+
 // ---------------------------
 
 // Middleware
