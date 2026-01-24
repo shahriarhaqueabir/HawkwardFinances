@@ -1625,30 +1625,3 @@ export default function Heartbeat() {
 
   return null; // This component doesn’t render anything
 };
-
-
-
-// ==================== heartbeat ====================
-
-import { useEffect } from "react";
-
-export default function Heartbeat() {
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetch("/api/heartbeat", { method: "POST" }).catch(console.warn);
-    }, 5000); // every 5 seconds
-
-    const handleTabClose = () => {
-      fetch("/api/tab-closed", { method: "POST" }).catch(console.warn);
-    };
-
-    window.addEventListener("beforeunload", handleTabClose);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("beforeunload", handleTabClose);
-    };
-  }, []);
-
-  return null; // This component doesn’t render anything
-};
