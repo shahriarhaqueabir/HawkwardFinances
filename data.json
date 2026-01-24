@@ -168,7 +168,7 @@
     {
       "id": 16,
       "name": "Mobile Provider",
-      "category": "Telecommunications",
+      "category": "Utilities & Bills",
       "type": "CONS",
       "monthlyPayment": 6.99,
       "annualPayment": 83.88,
@@ -179,7 +179,7 @@
     {
       "id": 17,
       "name": "Glasfaser Internet",
-      "category": "Telecommunications",
+      "category": "Utilities & Bills",
       "type": "CONS",
       "monthlyPayment": 50,
       "annualPayment": 600,
@@ -190,7 +190,7 @@
     {
       "id": 18,
       "name": "Naturstrom",
-      "category": "Household & Home",
+      "category": "Utilities & Bills",
       "type": "CONS",
       "monthlyPayment": 50,
       "annualPayment": 600,
@@ -212,7 +212,7 @@
     {
       "id": 20,
       "name": "Check24",
-      "category": "Telecommunications",
+      "category": "Utilities & Bills",
       "type": "CONS",
       "monthlyPayment": 0,
       "annualPayment": 0,
@@ -223,7 +223,7 @@
     {
       "id": 21,
       "name": "Verivox",
-      "category": "Telecommunications",
+      "category": "Utilities & Bills",
       "type": "CONS",
       "monthlyPayment": 0,
       "annualPayment": 0,
@@ -720,10 +720,10 @@
       "name": "JetBrains",
       "category": "Developer Tools",
       "type": "CONS",
-      "monthlyPayment": 13.9,
-      "annualPayment": 166.8,
-      "hasReminder": "Yes",
-      "status": "Cancelled",
+      "monthlyPayment": 0,
+      "annualPayment": 0,
+      "hasReminder": "No",
+      "status": "Active",
       "priority": "Optional"
     },
     {
@@ -797,10 +797,10 @@
       "name": "Claude",
       "category": "AI Tools",
       "type": "CONS",
-      "monthlyPayment": 19,
-      "annualPayment": 228,
-      "hasReminder": "Yes",
-      "status": "Cancelled",
+      "monthlyPayment": 0,
+      "annualPayment": 0,
+      "hasReminder": "No",
+      "status": "Active",
       "priority": "Optional"
     },
     {
@@ -956,6 +956,17 @@
       "hasReminder": "Yes",
       "status": "Active",
       "priority": "Essential"
+    },
+    {
+      "id": 88,
+      "name": "ewr",
+      "category": "Banking & Finance",
+      "type": "CONS",
+      "monthlyPayment": 0,
+      "annualPayment": 23,
+      "hasReminder": "No",
+      "status": "Active",
+      "priority": "Critical"
     }
   ],
   "profile": {
@@ -1275,5 +1286,12 @@
         }
       ]
     }
+  },
+  "settings": {
+    "theme": "light",
+    "primaryColor": "#5d9bd5",
+    "currency": "€",
+    "heartbeatTimeout": 10,
+    "autoShutdown": true
   }
 }

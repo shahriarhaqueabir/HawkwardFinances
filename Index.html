@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Financial Dashboard</title>
     <link rel="stylesheet" href="styles.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="chart.min.js"></script>
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💼</text></svg>"
@@ -17,8 +17,8 @@
       <!-- SIDEBAR -->
       <div class="sidebar">
         <div class="sidebar-logo">
-          <h2>💼 Financial Hub</h2>
-          <p>Dashboard & Management</p>
+          <h2>💼 HawkwardFinances</h2>
+          <p>Accounts & Management</p>
         </div>
         <ul class="sidebar-nav">
           <li>
@@ -27,19 +27,16 @@
             </button>
           </li>
           <li>
-            <button class="nav-btn" data-tab="accounts">
-              📋 Expenses
-            </button>
+            <button class="nav-btn" data-tab="accounts">📋 Expenses</button>
           </li>
           <li>
-            <button class="nav-btn" data-tab="timeline">
-              📅 Timeline
-            </button>
+            <button class="nav-btn" data-tab="timeline">📅 Timeline</button>
           </li>
           <li>
-            <button class="nav-btn" data-tab="analytics">
-              📊 Reports
-            </button>
+            <button class="nav-btn" data-tab="analytics">📊 Reports</button>
+          </li>
+          <li>
+            <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
           </li>
         </ul>
 
@@ -84,9 +81,7 @@
               3-Year Financial Timeline
             </h2>
             <div class="mb-20">
-              <label class="font-bold mr-10"
-                >Starting Balance (€):</label
-              >
+              <label class="font-bold mr-10">Starting Balance (€):</label>
               <input
                 type="number"
                 id="startingBalanceInput"
@@ -128,7 +123,7 @@
             <div class="stats-grid">
               <div class="stat-card">
                 <div class="stat-label">Total Accounts</div>
-                <div class="stat-value" id="totalAccounts">87</div>
+                <div class="stat-value" id="totalAccounts">3</div>
               </div>
               <div class="stat-card">
                 <div class="stat-label">Paid Subscriptions</div>
@@ -171,7 +166,7 @@
           <div id="accounts" class="tab-content">
             <div class="table-wrapper">
               <div class="table-controls">
-                <button class="btn-primary" onclick="toggleAddForm()">
+                <button id="addAccountBtn" class="btn-primary" onclick="toggleAddForm()">
                   ➕ Add Account
                 </button>
                 <select
@@ -184,13 +179,9 @@
                   <option value="Government & Legal">Government & Legal</option>
                   <option value="Health & Insurance">Health & Insurance</option>
                   <option value="Banking & Finance">Banking & Finance</option>
-                  <option value="Telecommunications">Telecommunications</option>
-                  <option value="Shopping & E-Commerce">
-                    Shopping & E-Commerce
-                  </option>
-                  <option value="Productivity & Work">
-                    Productivity & Work
-                  </option>
+                  <option value="Utilities & Bills">Utilities & Bills</option>
+                  <option value="Shopping & E-Commerce">Shopping & E-Commerce</option>
+                  <option value="Productivity & Work">Productivity & Work</option>
                   <option value="Developer Tools">Developer Tools</option>
                   <option value="Entertainment & Streaming">
                     Entertainment & Streaming
@@ -246,7 +237,7 @@
                       class="cursor-pointer"
                     >
                       Category ↕
-                    </th>
+                    </th> 
                     <th
                       onclick="sortTable('monthlyPayment')"
                       data-sort="monthlyPayment"
@@ -288,6 +279,146 @@
                 <tbody id="accountsBody"></tbody>
               </table>
             </div>
+          </div>
+
+          <!-- TAB: Settings -->
+          <div id="settings" class="tab-content">
+            <h2 class="page-title-section">Application Settings</h2>
+            <p class="page-description">
+              Customize your experience and manage your data
+            </p>
+
+            <div class="settings-grid">
+              <!-- Visual Settings -->
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>🎨 Visuals</h3>
+                </div>
+                <div class="settings-item">
+                  <label>Primary Theme Color</label>
+                  <input
+                    type="color"
+                    id="settingPrimaryColor"
+                    class="color-picker"
+                  />
+                </div>
+                <!-- <div class="settings-item">
+                  <label>Dark Mode</label>
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="settingDarkMode" />
+                    <span class="slider"></span>
+                  </div>
+                </div> -->
+              </div>
+
+              <!-- Localization Settings -->
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>🌍 Localization</h3>
+                </div>
+                <div class="settings-item">
+                  <label>Currency Symbol</label>
+                  <select id="settingCurrency" class="form-filter">
+                    <option value="€">Euro (€)</option>
+                    <option value="$">Dollar ($)</option>
+                    <option value="£">Pound (£)</option>
+                    <option value="¥">Yen (¥)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Data Management -->
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>📂 Data Management</h3>
+                </div>
+                <div class="settings-actions-vertical">
+                  <button class="btn-primary w-full" onclick="exportData()">
+                    📤 Export JSON Backup
+                  </button>
+                  <button class="btn-success w-full" onclick="downloadCSV()">
+                    📊 Download Expenses CSV
+                  </button>
+                  <button
+                    class="btn-info w-full"
+                    onclick="document.getElementById('importFile').click()"
+                  >
+                    📥 Import JSON Data
+                  </button>
+                  <input
+                    type="file"
+                    id="importFile"
+                    accept=".json"
+                    style="display: none"
+                    onchange="importData(event)"
+                  />
+                  <button
+                    class="btn-danger w-full"
+                    onclick="showFactoryResetModal()"
+                  >
+                    ⚠️ Factory Reset
+                  </button>
+                </div>
+              </div>
+
+              <!-- System Settings -->
+              <div class="settings-card">
+                <div class="settings-card-header">
+                  <h3>⚙️ System</h3>
+                </div>
+                <!-- <div class="settings-item">
+                  <label>Auto-Shutdown</label>
+                  <div class="toggle-switch">
+                    <input type="checkbox" id="settingAutoShutdown" />
+                    <span class="slider"></span>
+                  </div>
+                </div> -->
+                <div class="settings-item flex-column">
+                  <div class="flex-between w-full mb-10">
+                    <label>Inactivity Timeout</label>
+                    <span id="timeoutDisplay" class="font-bold">15s</span>
+                  </div>
+                  <input
+                    type="range"
+                    id="settingTimeout"
+                    min="10"
+                    max="1800"
+                    step="10"
+                    class="range-slider w-full"
+                  />
+                  <div class="flex-between w-full mt-5">
+                    <span class="text-xs">10s</span>
+                    <span class="text-xs">30m</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Factory Reset Confirmation -->
+      <div id="resetModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">⚠️ Factory Reset</div>
+          <div class="modal-body" style="padding: 20px 0">
+            <p>
+              This will clear all your profiles, accounts, and timeline data.
+            </p>
+            <p style="margin-top: 15px">
+              <label class="flex-center gap-10 cursor-pointer">
+                <input type="checkbox" id="includeSeedData" checked />
+                <span>Include default seed data (87 accounts)</span>
+              </label>
+            </p>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-secondary" onclick="closeResetModal()">
+              Cancel
+            </button>
+            <button class="btn-primary" onclick="confirmFactoryReset()">
+              Confirm Reset
+            </button>
           </div>
         </div>
       </div>
@@ -332,7 +463,7 @@
           </div>
 
           <div class="modal-actions">
-            <button class="btn-danger" onclick="closeCardModal()">
+            <button class="btn-secondary" onclick="closeCardModal()">
               Cancel
             </button>
             <button class="btn-primary" onclick="saveCard()">
@@ -349,7 +480,12 @@
           <div class="modal-form" id="accountForm">
             <div class="form-group">
               <label>Service Name *</label>
-              <input type="text" id="formService" required aria-label="Service Name" />
+              <input
+                type="text"
+                id="formService"
+                required
+                aria-label="Service Name"
+              />
             </div>
             <div class="form-group">
               <label>Category *</label>
@@ -358,7 +494,7 @@
                 <option>Government & Legal</option>
                 <option>Health & Insurance</option>
                 <option>Banking & Finance</option>
-                <option>Telecommunications</option>
+                <option>Utilities & Bills</option>
                 <option>Shopping & E-Commerce</option>
                 <option>Productivity & Work</option>
                 <option>Developer Tools</option>
@@ -424,7 +560,11 @@
             </div>
             <div class="form-group">
               <label>Criticality *</label>
-              <select id="formCriticality" required aria-label="Criticality Level">
+              <select
+                id="formCriticality"
+                required
+                aria-label="Criticality Level"
+              >
                 <option value="">Select Level</option>
                 <option value="Critical">Critical</option>
                 <option value="Essential">Essential</option>

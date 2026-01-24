@@ -5,102 +5,22 @@
 
 // ==================== STATE MANAGEMENT ====================
 let db;
-let editingAccountIndex = null;
+let editingAccountId = null;
 let editingCardId = null;
 let currentCustomFields = [];
+
+// Application Settings
+let appSettings = { ...DEFAULT_SETTINGS };
 
 // Cards Data - flexible card system
 let cards = [];
 
-// Accounts Data - 87 accounts
+// Accounts Data - 3 accounts
 let accounts = [
-    [1, "Elster", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [2, "BundID", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [3, "Rundfunkbeitrag", "Government & Legal", "GOV", 18.36, 220.32, "Yes", "Active", "Critical"],
-    [4, "SCHUFA", "Government & Legal", "GOV", 0, 0, "No", "Active", "Essential"],
-    [5, "Rentenversicherung", "Government & Legal", "GOV", 0, 0, "No", "Active", "Important"],
-    [6, "Finanzamt Portal", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [7, "Bürgeramt Online", "Government & Legal", "GOV", 0, 0, "No", "Active", "Essential"],
-    [8, "Bundesagentur für Arbeit", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [9, "TK (Techniker Krankenkasse)", "Health & Insurance", "FIN", 0, 0, "No", "Active", "Critical"],
-    [10, "DoctoLib", "Health & Insurance", "CONS", 0, 0, "No", "Active", "Important"],
-    [11, "Dog Insurance", "Health & Insurance", "FIN", 35, 420, "Yes", "Active", "Important"],
-    [12, "Deutsche Bank", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Essential"],
-    [13, "DKB", "Banking & Finance", "FIN", 0, 0, "No", "Planned", "Essential"],
-    [14, "PayPal", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Important"],
-    [15, "Klarna", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Important"],
-    [16, "Mobile Provider", "Telecommunications", "CONS", 6.99, 83.88, "Yes", "Active", "Essential"],
-    [17, "Glasfaser Internet", "Telecommunications", "CONS", 50, 600, "Yes", "Active", "Critical"],
-    [18, "Naturstrom", "Household & Home", "CONS", 50, 600, "Yes", "Active", "Essential"],
-    [19, "Housing Provider", "Household & Home", "CONS", 917, 11004, "Yes", "Active", "Critical"],
-    [20, "Check24", "Telecommunications", "CONS", 0, 0, "No", "Active", "Optional"],
-    [21, "Verivox", "Telecommunications", "CONS", 0, 0, "No", "Active", "Optional"],
-    [22, "Amazon", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [23, "Amazon Prime", "Shopping & E-Commerce", "CONS", 8.99, 107.88, "Yes", "Active", "Optional"],
-    [24, "Wolt Plus", "Shopping & E-Commerce", "CONS", 4.99, 59.88, "Yes", "Active", "Optional"],
-    [25, "eBay", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [26, "Kleinanzeigen", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [27, "Rossmann", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [28, "Aldi", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [29, "Otto.de", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [30, "Kaufland", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [31, "IKEA Family", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [32, "DM", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [33, "REWE", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [34, "Zalando", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [35, "MediaMarkt/Saturn", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [36, "Too Good To Go", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Planned", "Optional"],
-    [37, "Google Account #1", "Productivity & Work", "CONS", 0, 0, "No", "Dormant", "Important"],
-    [38, "Google Account #2", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
-    [39, "Hotmail/Outlook.com", "Productivity & Work", "CONS", 0, 0, "No", "Dormant", "Important"],
-    [40, "Notion", "Productivity & Work", "CONS", 0, 0, "No", "Planned", "Essential"],
-    [41, "Figma", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
-    [42, "Canva", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
-    [43, "Dropbox", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Optional"],
-    [44, "Microsoft OneDrive", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Important"],
-    [45, "Apple iCloud", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Optional"],
-    [46, "Bitwarden", "Developer Tools", "FIN", 0, 0, "No", "Active", "Critical"],
-    [47, "Microsoft Authenticator", "Developer Tools", "FIN", 0, 0, "No", "Active", "Critical"],
-    [48, "Crunchyroll", "Entertainment & Streaming", "CONS", 5.83, 70, "Yes", "Active", "Optional"],
-    [49, "YouTube", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Important"],
-    [50, "ARD Mediathek", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [51, "ZDF Mediathek", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [52, "Spotify", "Entertainment & Streaming", "CONS", 0, 0, "No", "Cancelled", "Optional"],
-    [53, "Netflix", "Entertainment & Streaming", "CONS", 0, 0, "No", "Cancelled", "Optional"],
-    [54, "Steam", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [55, "Epic Games Store", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [56, "Ubisoft Connect", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [57, "GOG.com", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [58, "GitHub", "Developer Tools", "CONS", 0, 0, "No", "Active", "Essential"],
-    [59, "GitLab", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [60, "Bitbucket", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [61, "Docker Hub", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [62, "Postman", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [63, "Bruno", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [64, "Insomnia", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [65, "Visual Studio Code", "Developer Tools", "CONS", 0, 0, "No", "Active", "Essential"],
-    [66, "JetBrains", "Developer Tools", "CONS", 13.9, 166.8, "Yes", "Cancelled", "Optional"],
-    [67, "Selenium Grid", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [68, "Cypress", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [69, "Jenkins", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [70, "GitHub Actions", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [71, "Stack Overflow", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [72, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [73, "Claude", "AI Tools", "CONS", 19, 228, "Yes", "Cancelled", "Optional"],
-    [74, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [75, "WhatsApp", "Social Media", "CONS", 0, 0, "No", "Active", "Important"],
-    [76, "Telegram", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
-    [77, "LinkedIn", "Social Media", "CONS", 0, 0, "No", "Active", "Essential"],
-    [78, "Instagram", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
-    [79, "Facebook", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
-    [80, "Apple ID", "Social Media", "CONS", 0, 0, "No", "Active", "Important"],
-    [81, "Airbnb", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
-    [82, "Skyscanner", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
-    [83, "Booking.com", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
-    [84, "Khan Academy Kids", "Family & Child", "CONS", 0, 0, "No", "Active", "Optional"],
-    [85, "Legal Aid (Rechtsschutz)", "Health & Insurance", "FIN", 35, 420, "Yes", "Active", "Essential"],
-    [86, "Contents (Hausrat)", "Health & Insurance", "FIN", 10, 120, "Yes", "Active", "Important"],
-    [87, "Liability (Haftpflicht)", "Health & Insurance", "FIN", 10, 120, "Yes", "Active", "Essential"]
+    [1, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [2, "Claude", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [3, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    
 ];
 
 // Convert accounts array to object format
@@ -110,9 +30,12 @@ accounts = convertAccountsToObjects(accounts);
 
 // ==================== LOCAL FILE STORAGE MANAGEMENT ====================
 
-const API_URL = 'http://localhost:3000/api/data';
+const API_URL = `${window.location.origin}/api/data`;
 
 function initIndexedDB() {
+    // Start heartbeat immediately
+    startHeartbeat();
+
     // We check if server is reachable and load initial data
     return new Promise((resolve, reject) => {
         fetch(API_URL)
@@ -146,6 +69,16 @@ function saveToIndexedDB(storeName, data, key = null) {
             .then(() => resolve())
             .catch(err => reject(err));
     });
+}
+
+function startHeartbeat() {
+    // Ping every 5 seconds
+    setInterval(() => {
+        fetch(`${window.location.origin}/api/heartbeat`, { 
+            method: 'POST',
+            keepalive: true // Ensure request completes even if tab is closing
+        }).catch(err => console.debug('Heartbeat failed (server likely closed)'));
+    }, 5000);
 }
 
 function loadFromIndexedDB(storeName, key = null) {
@@ -320,29 +253,33 @@ navButtons.forEach(btn => {
 });
 
 function switchTab(tabName) {
-    try {
-        // Validation check
-        if (!TAB_TITLES || !TAB_TITLES[tabName]) {
-            console.error(`Invalid tab name: ${tabName}`);
-            return;
-        }
+    if (!tabName) return;
 
-        tabContents.forEach(tab => tab.classList.remove('active'));
-        navButtons.forEach(btn => btn.classList.remove('active'));
+    // Remove active class from all buttons and tabs
+    navButtons.forEach(btn => btn.classList.remove('active'));
+    tabContents.forEach(tab => tab.classList.remove('active'));
 
-        const tab = document.getElementById(tabName);
-        const btn = document.querySelector(`[data-tab="${tabName}"]`);
+    // Add active class to selected button and tab
+    const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+    const activeTab = document.getElementById(tabName);
 
-        if (tab) tab.classList.add('active');
-        if (btn) btn.classList.add('active');
+    if (activeBtn) activeBtn.classList.add('active');
+    if (activeTab) activeTab.classList.add('active');
 
-        if (pageTitle) pageTitle.textContent = TAB_TITLES[tabName];
+    // Update page title
+    if (pageTitle) pageTitle.textContent = TAB_TITLES[tabName] || tabName;
 
-        if (tabName === 'analytics') setTimeout(() => initCharts(), 100);
-        if (tabName === 'accounts') renderAccounts();
-    } catch (e) {
-        console.error('Error switching tabs:', e);
-        notify('⚠️ Error loading tab. Please refresh.', NOTIFICATION_TYPES.ERROR);
+    // Special handling for specific tabs
+    if (tabName === 'analytics') {
+        initCharts();
+    } else if (tabName === 'timeline') {
+        initializeTimelineData();
+    } else if (tabName === 'accounts') {
+        renderAccounts();
+    } else if (tabName === 'settings') {
+        syncSettingsUI();
+    } else if (tabName === 'profile') {
+        renderCards();
     }
 }
 
@@ -695,7 +632,7 @@ function deleteCard(cardId) {
 
 // ==================== ACCOUNTS MANAGEMENT ====================
 
-function createAccountRow(row, index) {
+function createAccountRow(row) {
     const { id, name, category, monthlyPayment, annualPayment, hasReminder, status, priority } = row;
     const tr = document.createElement('tr');
     
@@ -709,8 +646,10 @@ function createAccountRow(row, index) {
         <td class="col-service">
             <div class="service-info">
                 <span class="service-name">${name}</span>
-                <span class="badge badge-outline category-badge">${category}</span>
             </div>
+        </td>
+        <td class="col-category">
+            <span class="badge badge-outline category-badge">${category}</span>
         </td>
         <td class="col-cost tabular">${TIMELINE_CONFIG.currency}${monthlyPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         <td class="col-cost tabular">${TIMELINE_CONFIG.currency}${annualPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
@@ -725,8 +664,8 @@ function createAccountRow(row, index) {
         </td>
         <td class="col-actions">
             <div class="table-actions">
-                <button class="btn-icon edit" onclick="editAccount(${index})" title="Edit ${name}">✏️</button>
-                <button class="btn-icon delete" onclick="deleteAccount(${index})" title="Delete ${name}">🗑️</button>
+                <button class="btn-icon edit" onclick="editAccount(${id})" title="Edit ${name}">✏️</button>
+                <button class="btn-icon delete" onclick="deleteAccount(${id})" title="Delete ${name}">🗑️</button>
             </div>
         </td>
     `;
@@ -738,13 +677,13 @@ function renderAccounts() {
     if (!tbody) return;
 
     tbody.innerHTML = '';
-    accounts.forEach((row, index) => {
-        tbody.appendChild(createAccountRow(row, index));
+    accounts.forEach((row) => {
+        tbody.appendChild(createAccountRow(row));
     });
 }
 
 function toggleAddForm() {
-    editingAccountIndex = null;
+    editingAccountId = null;
     modalTitle.textContent = '➕ Add New Account';
 
     // Manually reset form fields since accountForm is a div, not a form element
@@ -759,9 +698,12 @@ function toggleAddForm() {
     accountModal.classList.add('active');
 }
 
-function editAccount(index) {
-    editingAccountIndex = index;
-    const { name: service, category, monthlyPayment: monthlyCost, annualPayment: annualCost, hasReminder: paid, status, priority: criticality } = accounts[index];
+function editAccount(id) {
+    const account = accounts.find(a => a.id === id);
+    if (!account) return;
+
+    editingAccountId = id;
+    const { name: service, category, monthlyPayment: monthlyCost, annualPayment: annualCost, hasReminder: paid, status, priority: criticality } = account;
 
     modalTitle.textContent = `✏️ Edit Account: ${service}`;
     formService.value = service;
@@ -794,10 +736,13 @@ function saveAccount() {
         return;
     }
 
-    if (editingAccountIndex !== null) {
+    if (editingAccountId !== null) {
         // Edit existing
-        accounts[editingAccountIndex] = {
-            ...accounts[editingAccountIndex],
+        const index = accounts.findIndex(a => a.id === editingAccountId);
+        if (index === -1) return;
+
+        accounts[index] = {
+            ...accounts[index],
             name: service,
             category,
             monthlyPayment: monthlyCost,
@@ -827,6 +772,7 @@ function saveAccount() {
             closeAccountModal();
             renderAccounts();
             updateStats();
+            initCharts();
             notify(MESSAGES.accountSaved, NOTIFICATION_TYPES.SUCCESS);
         })
         .catch(err => {
@@ -838,7 +784,10 @@ function saveAccount() {
         });
 }
 
-function deleteAccount(index) {
+function deleteAccount(id) {
+    const index = accounts.findIndex(a => a.id === id);
+    if (index === -1) return;
+
     const accountName = accounts[index].name;
     if (confirm(MESSAGES.deleteConfirm(accountName))) {
         accounts.splice(index, 1);
@@ -847,6 +796,7 @@ function deleteAccount(index) {
             .then(() => {
                 renderAccounts();
                 updateStats();
+                initCharts();
                 notify(MESSAGES.accountDeleted, NOTIFICATION_TYPES.SUCCESS);
             })
             .catch(err => {
@@ -859,7 +809,7 @@ function deleteAccount(index) {
 
 function closeAccountModal() {
     accountModal.classList.remove('active');
-    editingAccountIndex = null;
+    editingAccountId = null;
 }
 
 function filterAccounts() {
@@ -873,8 +823,8 @@ function filterAccounts() {
     if (!accountsBody) return;
 
     accountsBody.innerHTML = '';
-    filtered.forEach((row, index) => {
-        accountsBody.appendChild(createAccountRow(row, index));
+    filtered.forEach((row) => {
+        accountsBody.appendChild(createAccountRow(row));
     });
 }
 
@@ -967,15 +917,15 @@ function initCharts() {
     // Aggregating Data
     const categoryCounts = {};
     const categoryCosts = {};
-    const criticalityCounts = {};
-    const statusCounts = {};
+    const criticalityCounts = { 'Critical': 0, 'Essential': 0, 'Important': 0, 'Optional': 0 };
+    const statusCounts = { 'Active': 0, 'Planned': 0, 'Dormant': 0, 'Cancelled': 0 };
 
     accounts.forEach(acc => {
         const { category, monthlyPayment, status, priority } = acc;
         categoryCounts[category] = (categoryCounts[category] || 0) + 1;
         categoryCosts[category] = (categoryCosts[category] || 0) + monthlyPayment;
-        criticalityCounts[priority] = (criticalityCounts[priority] || 0) + 1;
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
+        if (criticalityCounts.hasOwnProperty(priority)) criticalityCounts[priority]++;
+        if (statusCounts.hasOwnProperty(status)) statusCounts[status]++;
     });
 
     // 1. Accounts by Category (Horizontal Bar - Sorted)
@@ -985,33 +935,28 @@ function initCharts() {
 
     const categoryCtx = document.getElementById('categoryChart');
     if (categoryCtx) {
-        if (categoryChartInstance) {
-            categoryChartInstance.data.labels = sortedCategories.map(i => i[0]);
-            categoryChartInstance.data.datasets[0].data = sortedCategories.map(i => i[1]);
-            categoryChartInstance.update();
-        } else {
-            categoryChartInstance = new Chart(categoryCtx, {
-                type: 'bar',
-                data: {
-                    labels: sortedCategories.map(i => i[0]),
-                    datasets: [{
-                        label: 'Number of Accounts',
-                        data: sortedCategories.map(i => i[1]),
-                        backgroundColor: COLORS.chartPalette,
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    indexAxis: 'y', // Horizontal Bar
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }, // Hide legend for cleaner look
-                    scales: {
-                        x: { beginAtZero: true, grid: { display: false } },
-                        y: { grid: { display: false } }
-                    }
+        if (categoryChartInstance) categoryChartInstance.destroy();
+        categoryChartInstance = new Chart(categoryCtx, {
+            type: 'bar',
+            data: {
+                labels: sortedCategories.map(i => i[0]),
+                datasets: [{
+                    label: 'Number of Accounts',
+                    data: sortedCategories.map(i => i[1]),
+                    backgroundColor: COLORS.chartPalette,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, grid: { display: false } },
+                    y: { grid: { display: false } }
                 }
-            });
-        }
+            }
+        });
     }
 
     // 2. Monthly Cost Distribution (Horizontal Bar - Sorted by Cost)
@@ -1021,155 +966,113 @@ function initCharts() {
 
     const costCtx = document.getElementById('costChart');
     if (costCtx) {
-        if (costChartInstance) {
-            costChartInstance.data.labels = sortedCosts.map(i => i[0]);
-            costChartInstance.data.datasets[0].data = sortedCosts.map(i => i[1]);
-            costChartInstance.update();
-        } else {
-            costChartInstance = new Chart(costCtx, {
-                type: 'bar',
-                data: {
-                    labels: sortedCosts.map(i => i[0]),
-                    datasets: [{
-                        label: `Monthly Cost (${TIMELINE_CONFIG.currency})`,
-                        data: sortedCosts.map(i => i[1]),
-                        backgroundColor: COLORS.primary,
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    indexAxis: 'y', // Horizontal Bar for better readable labels
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { beginAtZero: true },
-                        y: { grid: { display: false } }
-                    }
+        if (costChartInstance) costChartInstance.destroy();
+        costChartInstance = new Chart(costCtx, {
+            type: 'bar',
+            data: {
+                labels: sortedCosts.map(i => i[0]),
+                datasets: [{
+                    label: `Monthly Cost (${TIMELINE_CONFIG.currency})`,
+                    data: sortedCosts.map(i => i[1]),
+                    backgroundColor: COLORS.primary,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true },
+                    y: { grid: { display: false } }
                 }
-            });
-        }
+            }
+        });
     }
 
     // 3. Criticality Levels (Vertical Bar)
     const criticalityCtx = document.getElementById('criticalityChart');
     if (criticalityCtx) {
-        if (criticalityChartInstance) {
-            criticalityChartInstance.data.labels = Object.keys(criticalityCounts);
-            criticalityChartInstance.data.datasets[0].data = Object.values(criticalityCounts);
-            criticalityChartInstance.update();
-        } else {
-            criticalityChartInstance = new Chart(criticalityCtx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(criticalityCounts),
-                    datasets: [{
-                        label: 'Count',
-                        data: Object.values(criticalityCounts),
-                        backgroundColor: [
-                            'rgba(239, 68, 68, 0.7)',  // Critical (Red)
-                            'rgba(245, 158, 11, 0.7)', // Essential (Orange)
-                            'rgba(99, 102, 241, 0.7)', // Important (Indigo)
-                            'rgba(148, 163, 184, 0.7)' // Optional (Slate)
-                        ],
-                        borderRadius: 4,
-                        barPercentage: 0.6
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { 
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                generateLabels: (chart) => {
-                                    const data = chart.data;
-                                    if (data.labels.length && data.datasets.length) {
-                                        return data.labels.map((label, i) => {
-                                            const ds = data.datasets[0];
-                                            return {
-                                                text: label,
-                                                fillStyle: ds.backgroundColor[i],
-                                                strokeStyle: ds.backgroundColor[i],
-                                                hidden: false, // Custom legend, simple display only
-                                                index: i
-                                            };
-                                        });
-                                    }
-                                    return [];
-                                }
-                            }
+        if (criticalityChartInstance) criticalityChartInstance.destroy();
+        criticalityChartInstance = new Chart(criticalityCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(criticalityCounts),
+                datasets: [{
+                    label: 'Count',
+                    data: Object.values(criticalityCounts),
+                    backgroundColor: [
+                        'rgba(239, 68, 68, 0.7)',  // Critical (Red)
+                        'rgba(245, 158, 11, 0.7)', // Essential (Orange)
+                        'rgba(99, 102, 241, 0.7)', // Important (Indigo)
+                        'rgba(148, 163, 184, 0.7)' // Optional (Slate)
+                    ],
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            generateLabels: (chart) => chart.data.labels.map((label, i) => ({
+                                text: label,
+                                fillStyle: chart.data.datasets[0].backgroundColor[i],
+                                strokeStyle: chart.data.datasets[0].backgroundColor[i],
+                                index: i
+                            }))
                         }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
                     }
-                }
-            });
-        }
+                },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
     }
 
     // 4. Account Status (Vertical Bar)
     const statusCtx = document.getElementById('statusChart');
     if (statusCtx) {
-        if (statusChartInstance) {
-            // Update existing instance
-            statusChartInstance.data.labels = Object.keys(statusCounts);
-            statusChartInstance.data.datasets[0].data = Object.values(statusCounts);
-            statusChartInstance.update();
-        } else {
-            // Create new instance
-            statusChartInstance = new Chart(statusCtx, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(statusCounts),
-                    datasets: [{
-                        label: 'Count',
-                        data: Object.values(statusCounts),
-                        backgroundColor: [
-                            COLORS.success, // Active
-                            COLORS.info,    // Planned
-                            COLORS.warning, // Dormant
-                            COLORS.danger   // Cancelled
-                        ],
-                        borderRadius: 4,
-                        barPercentage: 0.6
-                    }]
-                },
-                options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { 
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                generateLabels: (chart) => {
-                                    const data = chart.data;
-                                    if (data.labels.length && data.datasets.length) {
-                                        return data.labels.map((label, i) => {
-                                            const ds = data.datasets[0];
-                                            return {
-                                                text: label,
-                                                fillStyle: ds.backgroundColor[i],
-                                                strokeStyle: ds.backgroundColor[i],
-                                                hidden: false,
-                                                index: i
-                                            };
-                                        });
-                                    }
-                                    return [];
-                                }
-                            }
+        if (statusChartInstance) statusChartInstance.destroy();
+        statusChartInstance = new Chart(statusCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(statusCounts),
+                datasets: [{
+                    label: 'Count',
+                    data: Object.values(statusCounts),
+                    backgroundColor: [
+                        COLORS.success, // Active
+                        COLORS.info,    // Planned
+                        COLORS.warning, // Dormant
+                        COLORS.danger   // Cancelled
+                    ],
+                    borderRadius: 4,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            generateLabels: (chart) => chart.data.labels.map((label, i) => ({
+                                text: label,
+                                fillStyle: chart.data.datasets[0].backgroundColor[i],
+                                strokeStyle: chart.data.datasets[0].backgroundColor[i],
+                                index: i
+                            }))
                         }
-                    },
-                    scales: {
-                        y: { beginAtZero: true }
                     }
-                }
-            });
-        }
+                },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
     }
-
     updateStats();
 }
 
@@ -1419,6 +1322,301 @@ function renderBalanceChart(timelineData) {
     });
 }
 
+// ==================== SETTINGS LOGIC ====================
+
+function syncSettingsUI() {
+    const colorInput = document.getElementById('settingPrimaryColor');
+    const darkModeInput = document.getElementById('settingDarkMode');
+    const currencyInput = document.getElementById('settingCurrency');
+    const timeoutInput = document.getElementById('settingTimeout');
+    const autoShutdownInput = document.getElementById('settingAutoShutdown');
+    const timeoutDisplay = document.getElementById('timeoutDisplay');
+
+    if (colorInput) colorInput.value = appSettings.primaryColor;
+    if (darkModeInput) darkModeInput.checked = appSettings.theme === 'dark';
+    if (currencyInput) currencyInput.value = appSettings.currency;
+    if (timeoutInput) timeoutInput.value = appSettings.heartbeatTimeout;
+    if (autoShutdownInput) autoShutdownInput.checked = appSettings.autoShutdown;
+    
+    if (timeoutDisplay) {
+        const val = appSettings.heartbeatTimeout;
+        timeoutDisplay.textContent = val >= 60 ? `${Math.floor(val/60)}m ${val%60}s` : `${val}s`;
+    }
+
+    // Add event listeners if not already added
+    if (colorInput && !colorInput.dataset.listener) {
+        colorInput.dataset.listener = 'true';
+        colorInput.addEventListener('input', (e) => {
+            appSettings.primaryColor = e.target.value;
+            applySettings();
+            saveSettings();
+        });
+        
+        if (darkModeInput) {
+            darkModeInput.addEventListener('change', (e) => {
+                appSettings.theme = e.target.checked ? 'dark' : 'light';
+                applySettings();
+                saveSettings();
+            });
+        }
+        
+        if (currencyInput) {
+            currencyInput.addEventListener('change', (e) => {
+                appSettings.currency = e.target.value;
+                TIMELINE_CONFIG.currency = e.target.value;
+                saveSettings();
+                notify(`Currency updated to ${e.target.value}. Please refresh or switch tabs to see all changes.`, NOTIFICATION_TYPES.SUCCESS);
+            });
+        }
+        
+        if (timeoutInput) {
+            timeoutInput.addEventListener('input', (e) => {
+                appSettings.heartbeatTimeout = parseInt(e.target.value);
+                const val = appSettings.heartbeatTimeout;
+                timeoutDisplay.textContent = val >= 60 ? `${Math.floor(val/60)}m ${val%60}s` : `${val}s`;
+            });
+            
+            timeoutInput.addEventListener('change', () => {
+                applySettings();
+                saveSettings();
+            });
+        }
+
+        if (autoShutdownInput) {
+            autoShutdownInput.addEventListener('change', (e) => {
+                appSettings.autoShutdown = e.target.checked;
+                applySettings();
+                saveSettings();
+            });
+        }
+    }
+}
+
+function applySettings() {
+    // 1. Apply Theme
+    if (appSettings.theme === 'dark') {
+        document.body.classList.add('dark-theme');
+    } else {
+        document.body.classList.remove('dark-theme');
+    }
+
+    // 2. Apply Primary Color
+    document.documentElement.style.setProperty('--color-primary', appSettings.primaryColor);
+    
+    // 3. Update Timeline Currency (in-memory)
+    TIMELINE_CONFIG.currency = appSettings.currency;
+
+    // 4. Sync with Server
+    fetch(`${window.location.origin}/api/settings/system`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            timeout: appSettings.heartbeatTimeout,
+            enabled: appSettings.autoShutdown
+        })
+    }).catch(err => console.error('Failed to sync system settings:', err));
+}
+
+async function saveSettings() {
+    try {
+        await saveToIndexedDB(DB_CONFIG.stores.settings, appSettings, 'appSettings');
+    } catch (err) {
+        console.error('Error saving settings:', err);
+    }
+}
+
+// Data Management Functions
+
+function exportData() {
+    fetch(API_URL)
+        .then(res => res.json())
+        .then(data => {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `finance_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            notify('✅ Backup exported successfully!', NOTIFICATION_TYPES.SUCCESS);
+        })
+        .catch(err => notify('❌ Export failed', NOTIFICATION_TYPES.ERROR));
+}
+
+function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            // Quick validation
+            if (!data.accounts || !data.profile) throw new Error('Invalid backup format');
+            
+            // Overwrite server data
+            const stores = Object.keys(data);
+            const promises = stores.map(store => saveToIndexedDB(store, data[store]));
+            
+            Promise.all(promises).then(() => {
+                notify('✅ Data imported! Reloading...', NOTIFICATION_TYPES.SUCCESS);
+                setTimeout(() => location.reload(), 1500);
+            });
+        } catch (err) {
+            notify('❌ Invalid JSON file', NOTIFICATION_TYPES.ERROR);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function showFactoryResetModal() {
+    const modal = document.getElementById('resetModal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeResetModal() {
+    const modal = document.getElementById('resetModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function confirmFactoryReset() {
+    const includeSeed = document.getElementById('includeSeedData').checked;
+    
+    // Default empty state
+    const emptyData = {
+        profile: { cards: [] },
+        timeline: { months: [], startingBalance: 0 },
+        settings: DEFAULT_SETTINGS
+    };
+
+    const accountsToSave = includeSeed ? convertAccountsToObjects(SEED_DATA) : [];
+
+    Promise.all([
+        saveToIndexedDB(DB_CONFIG.stores.accounts, accountsToSave, 'allAccounts'),
+        saveToIndexedDB(DB_CONFIG.stores.profile, emptyData.profile.cards, 'cards'),
+        saveToIndexedDB(DB_CONFIG.stores.timeline, emptyData.timeline, 'timelineData'),
+        saveToIndexedDB(DB_CONFIG.stores.settings, DEFAULT_SETTINGS, 'appSettings')
+    ]).then(() => {
+        notify('✅ Factory reset complete! Reloading...', NOTIFICATION_TYPES.SUCCESS);
+        setTimeout(() => location.reload(), 1500);
+    });
+}
+
+const SEED_DATA = [
+    [1, "Elster", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
+    [2, "BundID", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
+    [3, "Rundfunkbeitrag", "Government & Legal", "GOV", 18.36, 220.32, "Yes", "Active", "Critical"],
+    [4, "SCHUFA", "Government & Legal", "GOV", 0, 0, "No", "Active", "Essential"],
+    [5, "Rentenversicherung", "Government & Legal", "GOV", 0, 0, "No", "Active", "Important"],
+    [6, "Finanzamt Portal", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
+    [7, "Bürgeramt Online", "Government & Legal", "GOV", 0, 0, "No", "Active", "Essential"],
+    [8, "Bundesagentur für Arbeit", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
+    [9, "TK (Techniker Krankenkasse)", "Health & Insurance", "FIN", 0, 0, "No", "Planned", "Critical"],
+    [10, "DoctoLib", "Health & Insurance", "CONS", 0, 0, "No", "Active", "Important"],
+    [11, "Dog Insurance", "Health & Insurance", "FIN", 0, 0, "No", "Planned", "Important"],
+    [12, "Deutsche Bank", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Essential"],
+    [13, "DKB", "Banking & Finance", "FIN", 0, 0, "No", "Planned", "Essential"],
+    [14, "PayPal", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Important"],
+    [15, "Klarna", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Important"],
+    [16, "Mobile Provider", "Telecommunications", "CONS", 6.99, 83.88, "Yes", "Active", "Essential"],
+    [17, "Glasfaser Internet", "Telecommunications", "CONS", 50, 600, "Yes", "Active", "Critical"],
+    [18, "Naturstrom", "Household & Home", "CONS", 50, 600, "Yes", "Active", "Essential"],
+    [19, "Housing Provider", "Household & Home", "CONS", 917, 11004, "Yes", "Active", "Critical"],
+    [20, "Check24", "Telecommunications", "CONS", 0, 0, "No", "Active", "Optional"],
+    [21, "Verivox", "Telecommunications", "CONS", 0, 0, "No", "Active", "Optional"],
+    [22, "Amazon", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
+    [23, "Amazon Prime", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [24, "Wolt Plus", "Shopping & E-Commerce", "CONS", 4.99, 59.88, "Yes", "Active", "Optional"],
+    [25, "eBay", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
+    [26, "Kleinanzeigen", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
+    [27, "Rossmann", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [28, "Aldi", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
+    [29, "Otto.de", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [30, "Kaufland", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [31, "IKEA Family", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [32, "DM", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [33, "REWE", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [34, "Zalando", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [35, "MediaMarkt/Saturn", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
+    [36, "Too Good To Go", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Planned", "Optional"],
+    [37, "Google Account #1", "Productivity & Work", "CONS", 0, 0, "No", "Dormant", "Important"],
+    [38, "Google Account #2", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
+    [39, "Hotmail/Outlook.com", "Productivity & Work", "CONS", 0, 0, "No", "Dormant", "Important"],
+    [40, "Notion", "Productivity & Work", "CONS", 0, 0, "No", "Planned", "Essential"],
+    [41, "Figma", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
+    [42, "Canva", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
+    [43, "Dropbox", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Optional"],
+    [44, "Microsoft OneDrive", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Important"],
+    [45, "Apple iCloud", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Optional"],
+    [46, "Bitwarden", "Developer Tools", "FIN", 0, 0, "No", "Active", "Critical"],
+    [47, "Microsoft Authenticator", "Developer Tools", "FIN", 0, 0, "No", "Active", "Critical"],
+    [48, "Crunchyroll", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
+    [49, "YouTube", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Important"],
+    [50, "ARD Mediathek", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
+    [51, "ZDF Mediathek", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
+    [52, "Spotify", "Entertainment & Streaming", "CONS", 0, 0, "No", "Cancelled", "Optional"],
+    [53, "Netflix", "Entertainment & Streaming", "CONS", 0, 0, "No", "Cancelled", "Optional"],
+    [54, "Steam", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
+    [55, "Epic Games Store", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
+    [56, "Ubisoft Connect", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
+    [57, "GOG.com", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
+    [58, "GitHub", "Developer Tools", "CONS", 0, 0, "No", "Active", "Essential"],
+    [59, "GitLab", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
+    [60, "Bitbucket", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [61, "Docker Hub", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
+    [62, "Postman", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
+    [63, "Bruno", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [64, "Insomnia", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [65, "Visual Studio Code", "Developer Tools", "CONS", 0, 0, "No", "Active", "Essential"],
+    [66, "JetBrains", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [67, "Selenium Grid", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
+    [68, "Cypress", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
+    [69, "Jenkins", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
+    [70, "GitHub Actions", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
+    [71, "Stack Overflow", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
+    [72, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [73, "Claude", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [74, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [75, "WhatsApp", "Social Media", "CONS", 0, 0, "No", "Active", "Important"],
+    [76, "Telegram", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
+    [77, "LinkedIn", "Social Media", "CONS", 0, 0, "No", "Active", "Essential"],
+    [78, "Instagram", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
+    [79, "Facebook", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
+    [80, "Apple ID", "Social Media", "CONS", 0, 0, "No", "Active", "Important"],
+    [81, "Airbnb", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
+    [82, "Skyscanner", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
+    [83, "Booking.com", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
+    [84, "Khan Academy Kids", "Family & Child", "CONS", 0, 0, "No", "Active", "Optional"],
+    [85, "Legal Aid (Rechtsschutz)", "Health & Insurance", "FIN", 35, 420, "Yes", "Active", "Essential"],
+    [86, "Contents (Hausrat)", "Health & Insurance", "FIN", 10, 120, "Yes", "Active", "Important"],
+    [87, "Liability (Haftpflicht)", "Health & Insurance", "FIN", 10, 120, "Yes", "Active", "Essential"]
+];
+
+function downloadCSV() {
+    const headers = ['ID', 'Service', 'Category', 'MonthlyCost', 'AnnualCost', 'Status', 'Criticality'];
+    const rows = accounts.map(a => [
+        a.id, 
+        `"${a.name}"`, 
+        `"${a.category}"`, 
+        a.monthlyPayment, 
+        a.annualPayment, 
+        a.status, 
+        a.priority
+    ]);
+    
+    let csvContent = "data:text/csv;charset=utf-8," 
+        + headers.join(",") + "\n"
+        + rows.map(r => r.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "expenses_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 // ==================== EVENT LISTENERS ====================
 
 if (saveTimelineBtn) {
@@ -1452,7 +1650,7 @@ initIndexedDB()
         try {
             // Load accounts
             const savedAccounts = await loadFromIndexedDB(DB_CONFIG.stores.accounts, 'allAccounts');
-            if (savedAccounts && Array.isArray(savedAccounts) && savedAccounts.length > 0) {
+            if (savedAccounts && Array.isArray(savedAccounts)) {
                 accounts = savedAccounts;
             } else {
                 await saveToIndexedDB(DB_CONFIG.stores.accounts, accounts, 'allAccounts');
@@ -1464,6 +1662,18 @@ initIndexedDB()
         renderAccounts();
         updateStats();
         initializeTimelineData();
+
+        try {
+            // Load settings
+            const savedSettings = await loadFromIndexedDB(DB_CONFIG.stores.settings, 'appSettings');
+            if (savedSettings) {
+                appSettings = { ...DEFAULT_SETTINGS, ...savedSettings };
+            }
+            applySettings();
+        } catch (err) {
+            console.error('Error loading settings:', err);
+            applySettings(); // Apply defaults
+        }
     })
     .catch(err => {
         console.error('IndexedDB initialization error:', err);
@@ -1472,3 +1682,34 @@ initIndexedDB()
         renderAccounts();
         updateStats();
     });
+
+// ==================== HEARTBEAT ====================
+(function initHeartbeat() {
+    const HEARTBEAT_INTERVAL = 5000; // 5 seconds
+    
+    // Send heartbeat to server
+    function sendHeartbeat() {
+        fetch('/api/heartbeat', { method: 'POST' })
+            .catch(err => console.warn('Heartbeat failed:', err));
+    }
+    
+    // Notify server when tab closes
+    function notifyTabClose() {
+        fetch('/api/tab-closed', { method: 'POST' })
+            .catch(err => console.warn('Tab-close notification failed:', err));
+    }
+    
+    // Start heartbeat loop
+    const heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+    
+    // Listen for tab/window close
+    window.addEventListener('beforeunload', () => {
+        clearInterval(heartbeatInterval);
+        notifyTabClose();
+    });
+    
+    // Initial heartbeat
+    sendHeartbeat();
+    
+    console.log('Heartbeat initialized: sending every ' + (HEARTBEAT_INTERVAL / 1000) + 's');
+})();
