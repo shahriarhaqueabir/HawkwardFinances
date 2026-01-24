@@ -125,13 +125,13 @@ app.post('/api/data', (req, res) => {
     }
 });
 
-// Heartbeat endpoint to keep server alive
+// Heartbeat endpoint
 app.post('/api/heartbeat', (req, res) => {
     resetShutdownTimer();
     res.json({ status: 'alive' });
 });
 
-// Update system settings (timeout & auto-shutdown)
+// Settings endpoint
 app.post('/api/settings/system', (req, res) => {
     const { timeout, enabled } = req.body;
     
@@ -145,7 +145,7 @@ app.post('/api/settings/system', (req, res) => {
         console.log(`System: Auto-shutdown ${enabled ? 'ENABLED' : 'DISABLED'}`);
     }
     
-    resetShutdownTimer(); // Apply changes immediately
+    resetShutdownTimer();
     res.json({ 
         success: true, 
         timeout: SHUTDOWN_TIMEOUT / 1000, 
@@ -153,22 +153,26 @@ app.post('/api/settings/system', (req, res) => {
     });
 });
 
-// Invoke dynamic import inside the async function
+// Tab closed endpoint (missing!)
+app.post('/api/tab-closed', (req, res) => {
+    console.log('Tab closed signal received. Server will shutdown in ' + (SHUTDOWN_TIMEOUT / 1000) + 's');
+    // Timer already started by heartbeat stopping
+    res.json({ acknowledged: true });
+});
+
+// Server startup
 app.listen(PORT, async () => {
-    console.log(`\x1b[32m%s\x1b[0m`, `--------------------------------------------------`);
-    console.log(`\x1b[32m%s\x1b[0m`, `🚀 Hawkward Server is running!`);
-    console.log(`\x1b[32m%s\x1b[0m`, `--------------------------------------------------`);
+    console.log('\x1b[32m%s\x1b[0m', '--------------------------------------------------');
+    console.log('\x1b[32m%s\x1b[0m', '🚀 Hawkward Server is running!');
+    console.log('\x1b[32m%s\x1b[0m', '--------------------------------------------------');
     console.log(`Local Access:   http://localhost:${PORT}`);
     console.log(`Network Access: http://${LOCAL_IP}:${PORT}`);
-    console.log(`--------------------------------------------------`);
+    console.log('--------------------------------------------------');
     console.log(`Auto-shutdown active: Server will exit ${SHUTDOWN_TIMEOUT / 1000}s after tab is closed.`);
     
-    // Start initial shutdown timer
     resetShutdownTimer();
-
-    // Open the browser
+    
     try {
-        // Dynamic import for 'open' (ESM-only package)
         const open = (await import('open')).default;
         await open(`http://localhost:${PORT}`);
     } catch (err) {

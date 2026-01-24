@@ -563,7 +563,6 @@ function createAccountRow(row) {
         <td class="col-service">
             <div class="service-info">
                 <span class="service-name">${name}</span>
-                <span class="badge badge-outline category-badge">${category}</span>
             </div>
         </td>
         <td class="col-category">
@@ -1429,9 +1428,9 @@ const SEED_DATA = [
     [6, "Finanzamt Portal", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
     [7, "Bürgeramt Online", "Government & Legal", "GOV", 0, 0, "No", "Active", "Essential"],
     [8, "Bundesagentur für Arbeit", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [9, "TK (Techniker Krankenkasse)", "Health & Insurance", "FIN", 0, 0, "No", "Active", "Critical"],
+    [9, "TK (Techniker Krankenkasse)", "Health & Insurance", "FIN", 0, 0, "No", "Planned", "Critical"],
     [10, "DoctoLib", "Health & Insurance", "CONS", 0, 0, "No", "Active", "Important"],
-    [11, "Dog Insurance", "Health & Insurance", "FIN", 35, 420, "Yes", "Active", "Important"],
+    [11, "Dog Insurance", "Health & Insurance", "FIN", 0, 0, "No", "Planned", "Important"],
     [12, "Deutsche Bank", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Essential"],
     [13, "DKB", "Banking & Finance", "FIN", 0, 0, "No", "Planned", "Essential"],
     [14, "PayPal", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Important"],
@@ -1443,7 +1442,7 @@ const SEED_DATA = [
     [20, "Check24", "Telecommunications", "CONS", 0, 0, "No", "Active", "Optional"],
     [21, "Verivox", "Telecommunications", "CONS", 0, 0, "No", "Active", "Optional"],
     [22, "Amazon", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [23, "Amazon Prime", "Shopping & E-Commerce", "CONS", 8.99, 107.88, "Yes", "Active", "Optional"],
+    [23, "Amazon Prime", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
     [24, "Wolt Plus", "Shopping & E-Commerce", "CONS", 4.99, 59.88, "Yes", "Active", "Optional"],
     [25, "eBay", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
     [26, "Kleinanzeigen", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
@@ -1468,7 +1467,7 @@ const SEED_DATA = [
     [45, "Apple iCloud", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Optional"],
     [46, "Bitwarden", "Developer Tools", "FIN", 0, 0, "No", "Active", "Critical"],
     [47, "Microsoft Authenticator", "Developer Tools", "FIN", 0, 0, "No", "Active", "Critical"],
-    [48, "Crunchyroll", "Entertainment & Streaming", "CONS", 5.83, 70, "Yes", "Active", "Optional"],
+    [48, "Crunchyroll", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
     [49, "YouTube", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Important"],
     [50, "ARD Mediathek", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
     [51, "ZDF Mediathek", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
@@ -1486,14 +1485,14 @@ const SEED_DATA = [
     [63, "Bruno", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
     [64, "Insomnia", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
     [65, "Visual Studio Code", "Developer Tools", "CONS", 0, 0, "No", "Active", "Essential"],
-    [66, "JetBrains", "Developer Tools", "CONS", 13.9, 166.8, "Yes", "Cancelled", "Optional"],
+    [66, "JetBrains", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
     [67, "Selenium Grid", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
     [68, "Cypress", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
     [69, "Jenkins", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
     [70, "GitHub Actions", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
     [71, "Stack Overflow", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
     [72, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [73, "Claude", "AI Tools", "CONS", 19, 228, "Yes", "Cancelled", "Optional"],
+    [73, "Claude", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
     [74, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
     [75, "WhatsApp", "Social Media", "CONS", 0, 0, "No", "Active", "Important"],
     [76, "Telegram", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
@@ -1601,27 +1600,33 @@ initIndexedDB()
         updateStats();
     });
 
-// ==================== heartbeat ====================
-
-import { useEffect } from "react";
-
-export default function Heartbeat() {
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetch("/api/heartbeat", { method: "POST" }).catch(console.warn);
-    }, 5000); // every 5 seconds
-
-    const handleTabClose = () => {
-      fetch("/api/tab-closed", { method: "POST" }).catch(console.warn);
-    };
-
-    window.addEventListener("beforeunload", handleTabClose);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("beforeunload", handleTabClose);
-    };
-  }, []);
-
-  return null; // This component doesn’t render anything
-};
+// ==================== HEARTBEAT ====================
+(function initHeartbeat() {
+    const HEARTBEAT_INTERVAL = 5000; // 5 seconds
+    
+    // Send heartbeat to server
+    function sendHeartbeat() {
+        fetch('/api/heartbeat', { method: 'POST' })
+            .catch(err => console.warn('Heartbeat failed:', err));
+    }
+    
+    // Notify server when tab closes
+    function notifyTabClose() {
+        fetch('/api/tab-closed', { method: 'POST' })
+            .catch(err => console.warn('Tab-close notification failed:', err));
+    }
+    
+    // Start heartbeat loop
+    const heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+    
+    // Listen for tab/window close
+    window.addEventListener('beforeunload', () => {
+        clearInterval(heartbeatInterval);
+        notifyTabClose();
+    });
+    
+    // Initial heartbeat
+    sendHeartbeat();
+    
+    console.log('Heartbeat initialized: sending every ' + (HEARTBEAT_INTERVAL / 1000) + 's');
+})();

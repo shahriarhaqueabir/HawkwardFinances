@@ -1289,7 +1289,7 @@
   },
   "settings": {
     "theme": "light",
-    "primaryColor": "#5365ee",
+    "primaryColor": "#5d9bd5",
     "currency": "€",
     "heartbeatTimeout": 10,
     "autoShutdown": true
