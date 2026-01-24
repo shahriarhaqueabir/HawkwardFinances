@@ -15,12 +15,13 @@ let appSettings = { ...DEFAULT_SETTINGS };
 // Cards Data - flexible card system
 let cards = [];
 
-// Accounts Data - 3 accounts
+// Accounts Data - 5 accounts
 let accounts = [
-    [1, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [2, "Claude", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [3, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    
+    [1, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [2, "Rent", "Household & Home", "CONS", 1000, 0, "Yes", "Active", "Important"],
+    [3, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Planned", "Essential"],
+    [4, "Naturstrom", "Utilities & Bills", "CONS", 40, 0, "Yes", "Active", "Important"],
+    [5, "Groceries", "Shopping & E-Commerce", "CONS", 100, 0, "Yes", "Active", "Important"]
 ];
 
 // Convert accounts array to object format
@@ -1482,114 +1483,97 @@ function closeResetModal() {
 function confirmFactoryReset() {
     const includeSeed = document.getElementById('includeSeedData').checked;
     
-    // Default empty state
-    const emptyData = {
-        profile: { cards: [] },
-        timeline: { months: [], startingBalance: 0 },
-        settings: DEFAULT_SETTINGS
-    };
+// Default empty state
+const emptyData = {
+    profile: { cards: [] },
+    timeline: { months: [], startingBalance: 0 },
+    settings: DEFAULT_SETTINGS
+};
 
-    const accountsToSave = includeSeed ? convertAccountsToObjects(SEED_DATA) : [];
+const accountsToSave = includeSeed ? convertAccountsToObjects(SEED_DATA) : [];
 
-    Promise.all([
-        saveToIndexedDB(DB_CONFIG.stores.accounts, accountsToSave, 'allAccounts'),
-        saveToIndexedDB(DB_CONFIG.stores.profile, emptyData.profile.cards, 'cards'),
-        saveToIndexedDB(DB_CONFIG.stores.timeline, emptyData.timeline, 'timelineData'),
-        saveToIndexedDB(DB_CONFIG.stores.settings, DEFAULT_SETTINGS, 'appSettings')
-    ]).then(() => {
-        notify('✅ Factory reset complete! Reloading...', NOTIFICATION_TYPES.SUCCESS);
-        setTimeout(() => location.reload(), 1500);
-    });
+// Load seed cards if includeSeed is checked
+const cardsToSave = includeSeed ? [
+    {
+        id: "card_1769082468127",
+        type: "adult",
+        emoji: "👨",
+        displayName: "Dad",
+        fullName: "Abir",
+        dateOfBirth: "1990-09-26",
+        job: "Software Consultant and Technical Support Specialist",
+        income: "70000"
+    },
+    {
+        id: "card_1769082534972",
+        type: "pet",
+        emoji: "🐕",
+        displayName: "Dog",
+        fullName: "Nuka",
+        dateOfBirth: "2023-03-01",
+        breed: "German Shepherd/Border Collie"
+    }
+] : [];
+
+// Load seed timeline if includeSeed is checked
+const timelineToSave = includeSeed ? {
+    startingBalance: 100,
+    months: [
+        { id: "2025-January", year: 2025, month: "January", display: "2025 - January", income: 1800, expenses: 2000 },
+        { id: "2025-February", year: 2025, month: "February", display: "2025 - February", income: 1800, expenses: 1500 },
+        { id: "2025-March", year: 2025, month: "March", display: "2025 - March", income: 1800, expenses: 1500 },
+        { id: "2025-April", year: 2025, month: "April", display: "2025 - April", income: 1800, expenses: 1500 },
+        { id: "2025-May", year: 2025, month: "May", display: "2025 - May", income: 1800, expenses: 1500 },
+        { id: "2025-June", year: 2025, month: "June", display: "2025 - June", income: 1800, expenses: 1500 },
+        { id: "2025-July", year: 2025, month: "July", display: "2025 - July", income: 1800, expenses: 1500 },
+        { id: "2025-August", year: 2025, month: "August", display: "2025 - August", income: 1800, expenses: 1500 },
+        { id: "2025-September", year: 2025, month: "September", display: "2025 - September", income: 1800, expenses: 1500 },
+        { id: "2025-October", year: 2025, month: "October", display: "2025 - October", income: 1800, expenses: 1500 },
+        { id: "2025-November", year: 2025, month: "November", display: "2025 - November", income: 1800, expenses: 1500 },
+        { id: "2025-December", year: 2025, month: "December", display: "2025 - December", income: 1800, expenses: 1500 },
+        { id: "2026-January", year: 2026, month: "January", display: "2026 - January", income: 1800, expenses: 1500 },
+        { id: "2026-February", year: 2026, month: "February", display: "2026 - February", income: 1800, expenses: 1500 },
+        { id: "2026-March", year: 2026, month: "March", display: "2026 - March", income: 1800, expenses: 1500 },
+        { id: "2026-April", year: 2026, month: "April", display: "2026 - April", income: 1800, expenses: 1500 },
+        { id: "2026-May", year: 2026, month: "May", display: "2026 - May", income: 1800, expenses: 1500 },
+        { id: "2026-June", year: 2026, month: "June", display: "2026 - June", income: 1800, expenses: 1500 },
+        { id: "2026-July", year: 2026, month: "July", display: "2026 - July", income: 1800, expenses: 1500 },
+        { id: "2026-August", year: 2026, month: "August", display: "2026 - August", income: 1800, expenses: 1500 },
+        { id: "2026-September", year: 2026, month: "September", display: "2026 - September", income: 1800, expenses: 1500 },
+        { id: "2026-October", year: 2026, month: "October", display: "2026 - October", income: 1800, expenses: 1500 },
+        { id: "2026-November", year: 2026, month: "November", display: "2026 - November", income: 1800, expenses: 1500 },
+        { id: "2026-December", year: 2026, month: "December", display: "2026 - December", income: 1800, expenses: 1500 },
+        { id: "2027-January", year: 2027, month: "January", display: "2027 - January", income: 1800, expenses: 1500 },
+        { id: "2027-February", year: 2027, month: "February", display: "2027 - February", income: 1800, expenses: 1500 },
+        { id: "2027-March", year: 2027, month: "March", display: "2027 - March", income: 1800, expenses: 1500 },
+        { id: "2027-April", year: 2027, month: "April", display: "2027 - April", income: 600, expenses: 1500 },
+        { id: "2027-May", year: 2027, month: "May", display: "2027 - May", income: 600, expenses: 1500 },
+        { id: "2027-June", year: 2027, month: "June", display: "2027 - June", income: 600, expenses: 1500 },
+        { id: "2027-July", year: 2027, month: "July", display: "2027 - July", income: 600, expenses: 1500 },
+        { id: "2027-August", year: 2027, month: "August", display: "2027 - August", income: 600, expenses: 1500 },
+        { id: "2027-September", year: 2027, month: "September", display: "2027 - September", income: 600, expenses: 1500 },
+        { id: "2027-October", year: 2027, month: "October", display: "2027 - October", income: 600, expenses: 1500 },
+        { id: "2027-November", year: 2027, month: "November", display: "2027 - November", income: 600, expenses: 1500 },
+        { id: "2027-December", year: 2027, month: "December", display: "2027 - December", income: 0, expenses: 1500 }
+    ]
+} : { months: [], startingBalance: 0 };
+
+Promise.all([
+    saveToIndexedDB(DB_CONFIG.stores.accounts, accountsToSave, 'allAccounts'),
+    saveToIndexedDB(DB_CONFIG.stores.profile, cardsToSave, 'cards'),
+    saveToIndexedDB(DB_CONFIG.stores.timeline, timelineToSave, 'timelineData'),
+    saveToIndexedDB(DB_CONFIG.stores.settings, DEFAULT_SETTINGS, 'appSettings')
+]).then(() => {
+    notify('✅ Factory reset complete! Reloading...', NOTIFICATION_TYPES.SUCCESS);
+    setTimeout(() => location.reload(), 1500);
+});
 }
-
 const SEED_DATA = [
-    [1, "Elster", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [2, "BundID", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [3, "Rundfunkbeitrag", "Government & Legal", "GOV", 18.36, 220.32, "Yes", "Active", "Critical"],
-    [4, "SCHUFA", "Government & Legal", "GOV", 0, 0, "No", "Active", "Essential"],
-    [5, "Rentenversicherung", "Government & Legal", "GOV", 0, 0, "No", "Active", "Important"],
-    [6, "Finanzamt Portal", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [7, "Bürgeramt Online", "Government & Legal", "GOV", 0, 0, "No", "Active", "Essential"],
-    [8, "Bundesagentur für Arbeit", "Government & Legal", "GOV", 0, 0, "No", "Active", "Critical"],
-    [9, "TK (Techniker Krankenkasse)", "Health & Insurance", "FIN", 0, 0, "No", "Planned", "Critical"],
-    [10, "DoctoLib", "Health & Insurance", "CONS", 0, 0, "No", "Active", "Important"],
-    [11, "Dog Insurance", "Health & Insurance", "FIN", 0, 0, "No", "Planned", "Important"],
-    [12, "Deutsche Bank", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Essential"],
-    [13, "DKB", "Banking & Finance", "FIN", 0, 0, "No", "Planned", "Essential"],
-    [14, "PayPal", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Important"],
-    [15, "Klarna", "Banking & Finance", "FIN", 0, 0, "No", "Active", "Important"],
-    [16, "Mobile Provider", "Telecommunications", "CONS", 6.99, 83.88, "Yes", "Active", "Essential"],
-    [17, "Glasfaser Internet", "Telecommunications", "CONS", 50, 600, "Yes", "Active", "Critical"],
-    [18, "Naturstrom", "Household & Home", "CONS", 50, 600, "Yes", "Active", "Essential"],
-    [19, "Housing Provider", "Household & Home", "CONS", 917, 11004, "Yes", "Active", "Critical"],
-    [20, "Check24", "Telecommunications", "CONS", 0, 0, "No", "Active", "Optional"],
-    [21, "Verivox", "Telecommunications", "CONS", 0, 0, "No", "Active", "Optional"],
-    [22, "Amazon", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [23, "Amazon Prime", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [24, "Wolt Plus", "Shopping & E-Commerce", "CONS", 4.99, 59.88, "Yes", "Active", "Optional"],
-    [25, "eBay", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [26, "Kleinanzeigen", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [27, "Rossmann", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [28, "Aldi", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Important"],
-    [29, "Otto.de", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [30, "Kaufland", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [31, "IKEA Family", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [32, "DM", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [33, "REWE", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [34, "Zalando", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [35, "MediaMarkt/Saturn", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Active", "Optional"],
-    [36, "Too Good To Go", "Shopping & E-Commerce", "CONS", 0, 0, "No", "Planned", "Optional"],
-    [37, "Google Account #1", "Productivity & Work", "CONS", 0, 0, "No", "Dormant", "Important"],
-    [38, "Google Account #2", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
-    [39, "Hotmail/Outlook.com", "Productivity & Work", "CONS", 0, 0, "No", "Dormant", "Important"],
-    [40, "Notion", "Productivity & Work", "CONS", 0, 0, "No", "Planned", "Essential"],
-    [41, "Figma", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
-    [42, "Canva", "Productivity & Work", "CONS", 0, 0, "No", "Active", "Important"],
-    [43, "Dropbox", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Optional"],
-    [44, "Microsoft OneDrive", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Important"],
-    [45, "Apple iCloud", "Cloud Storage & Backup", "CONS", 0, 0, "No", "Active", "Optional"],
-    [46, "Bitwarden", "Developer Tools", "FIN", 0, 0, "No", "Active", "Critical"],
-    [47, "Microsoft Authenticator", "Developer Tools", "FIN", 0, 0, "No", "Active", "Critical"],
-    [48, "Crunchyroll", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [49, "YouTube", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Important"],
-    [50, "ARD Mediathek", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [51, "ZDF Mediathek", "Entertainment & Streaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [52, "Spotify", "Entertainment & Streaming", "CONS", 0, 0, "No", "Cancelled", "Optional"],
-    [53, "Netflix", "Entertainment & Streaming", "CONS", 0, 0, "No", "Cancelled", "Optional"],
-    [54, "Steam", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [55, "Epic Games Store", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [56, "Ubisoft Connect", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [57, "GOG.com", "Gaming", "CONS", 0, 0, "No", "Active", "Optional"],
-    [58, "GitHub", "Developer Tools", "CONS", 0, 0, "No", "Active", "Essential"],
-    [59, "GitLab", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [60, "Bitbucket", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [61, "Docker Hub", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [62, "Postman", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [63, "Bruno", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [64, "Insomnia", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [65, "Visual Studio Code", "Developer Tools", "CONS", 0, 0, "No", "Active", "Essential"],
-    [66, "JetBrains", "Developer Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [67, "Selenium Grid", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [68, "Cypress", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [69, "Jenkins", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [70, "GitHub Actions", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [71, "Stack Overflow", "Developer Tools", "CONS", 0, 0, "No", "Active", "Important"],
-    [72, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [73, "Claude", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [74, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [75, "WhatsApp", "Social Media", "CONS", 0, 0, "No", "Active", "Important"],
-    [76, "Telegram", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
-    [77, "LinkedIn", "Social Media", "CONS", 0, 0, "No", "Active", "Essential"],
-    [78, "Instagram", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
-    [79, "Facebook", "Social Media", "CONS", 0, 0, "No", "Active", "Optional"],
-    [80, "Apple ID", "Social Media", "CONS", 0, 0, "No", "Active", "Important"],
-    [81, "Airbnb", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
-    [82, "Skyscanner", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
-    [83, "Booking.com", "Travel & Booking", "CONS", 0, 0, "No", "Active", "Optional"],
-    [84, "Khan Academy Kids", "Family & Child", "CONS", 0, 0, "No", "Active", "Optional"],
-    [85, "Legal Aid (Rechtsschutz)", "Health & Insurance", "FIN", 35, 420, "Yes", "Active", "Essential"],
-    [86, "Contents (Hausrat)", "Health & Insurance", "FIN", 10, 120, "Yes", "Active", "Important"],
-    [87, "Liability (Haftpflicht)", "Health & Insurance", "FIN", 10, 120, "Yes", "Active", "Essential"]
+    [1, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
+    [2, "Rent", "Household & Home", "CONS", 1000, 0, "Yes", "Active", "Important"],
+    [3, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Planned", "Optional"],
+    [4, "Naturstrom", "Utilities & Bills", "CONS", 40, 0, "Yes", "Active", "Important"],
+    [5, "Groceries", "Shopping & E-Commerce", "CONS", 100, 0, "Yes", "Active", "Important"]
 ];
 
 function downloadCSV() {
@@ -1639,6 +1623,28 @@ initIndexedDB()
             if (savedCards && Array.isArray(savedCards) && savedCards.length > 0) {
                 cards = savedCards;
             } else {
+                // Load seed cards on first startup
+                cards = [
+                    {
+                        id: "card_1769082468127",
+                        type: "adult",
+                        emoji: "👨",
+                        displayName: "Dad",
+                        fullName: "Abir",
+                        dateOfBirth: "1990-09-26",
+                        job: "Software Consultant and Technical Support Specialist",
+                        income: "70000"
+                    },
+                    {
+                        id: "card_1769082534972",
+                        type: "pet",
+                        emoji: "🐕",
+                        displayName: "Dog",
+                        fullName: "Nuka",
+                        dateOfBirth: "2023-03-01",
+                        breed: "German Shepherd/Border Collie"
+                    }
+                ];
                 await saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards');
             }
         } catch (err) {
@@ -1650,9 +1656,11 @@ initIndexedDB()
         try {
             // Load accounts
             const savedAccounts = await loadFromIndexedDB(DB_CONFIG.stores.accounts, 'allAccounts');
-            if (savedAccounts && Array.isArray(savedAccounts)) {
+            if (savedAccounts && Array.isArray(savedAccounts) && savedAccounts.length > 0) {
                 accounts = savedAccounts;
             } else {
+                // Load seed accounts on first startup
+                accounts = convertAccountsToObjects(SEED_DATA);
                 await saveToIndexedDB(DB_CONFIG.stores.accounts, accounts, 'allAccounts');
             }
         } catch (err) {
