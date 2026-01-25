@@ -40,7 +40,7 @@
           </li>
         </ul>
       </div>
-    
+
       <!-- MAIN CONTENT -->
       <div class="main-content">
         <div class="header">
@@ -81,6 +81,9 @@
                 <button id="saveTimelineBtn" class="btn-success">
                   💾 Save Timeline Data
                 </button>
+                <button onclick="autoPopulateTimeline()" class="btn-primary">
+                  🔄 Auto-populate from Finances
+                </button>
               </div>
               <table>
                 <thead>
@@ -108,19 +111,19 @@
             <div class="stats-grid">
               <div class="stat-card">
                 <div class="stat-label">Total Accounts</div>
-                <div class="stat-value" id="totalAccounts">3</div>
+                <div class="stat-value" id="totalAccounts">0</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">Paid Subscriptions</div>
-                <div class="stat-value" id="paidSubscriptions">11</div>
+                <div class="stat-label">Monthly Income</div>
+                <div class="stat-value type-income" id="statMonthlyIncome">€0</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">Monthly Cost</div>
-                <div class="stat-value" id="monthlyCost">€1,220</div>
+                <div class="stat-label">Monthly Expense</div>
+                <div class="stat-value type-expense" id="statMonthlyExpense">€0</div>
               </div>
               <div class="stat-card">
-                <div class="stat-label">Annual Recurring</div>
-                <div class="stat-value" id="annualCost">€14,642</div>
+                <div class="stat-label">Monthly Net Flow</div>
+                <div class="stat-value" id="statNetFlow">€0</div>
               </div>
             </div>
 
@@ -132,6 +135,13 @@
               <div class="chart-container">
                 <h3>Monthly Cost Distribution</h3>
                 <canvas id="costChart"></canvas>
+              </div>
+            </div>
+
+            <div class="charts-grid">
+              <div class="chart-container">
+                <h3>Cash Flow Comparison</h3>
+                <canvas id="cashFlowChart"></canvas>
               </div>
             </div>
 
@@ -151,7 +161,11 @@
           <div id="accounts" class="tab-content">
             <div class="table-wrapper">
               <div class="table-controls">
-                <button id="addAccountBtn" class="btn-primary" onclick="toggleAddForm()">
+                <button
+                  id="addAccountBtn"
+                  class="btn-primary"
+                  onclick="toggleAddForm()"
+                >
                   ➕ Add Account
                 </button>
                 <select
@@ -161,41 +175,7 @@
                   aria-label="Filter by Category"
                 >
                   <option value="">All Categories</option>
-                  <option value="Government & Legal">Government & Legal</option>
-                  <option value="Health & Insurance">Health & Insurance</option>
-                  <option value="Banking & Finance">Banking & Finance</option>
-                  <option value="Utilities & Bills">Utilities & Bills</option>
-                  <option value="Shopping & E-Commerce">Shopping & E-Commerce</option>
-                  <option value="Productivity & Work">Productivity & Work</option>
-                  <option value="Developer Tools">Developer Tools</option>
-                  <option value="Entertainment & Streaming">
-                    Entertainment & Streaming
-                  </option>
-                  <option value="Gaming">Gaming</option>
-                  <option value="AI Tools">AI Tools</option>
-                  <option value="Social Media">Social Media</option>
-                  <option value="Travel & Booking">Travel & Booking</option>
-                  <option value="Transportation">Transportation</option>
-                  <option value="Food & Dining">Food & Dining</option>
-                  <option value="Household & Home">Household & Home</option>
-                  <option value="Education & Learning">
-                    Education & Learning
-                  </option>
-                  <option value="Health & Wellness">Health & Wellness</option>
-                  <option value="Clothing & Fashion">Clothing & Fashion</option>
-                  <option value="Personal Care & Beauty">
-                    Personal Care & Beauty
-                  </option>
-                  <option value="Hobbies & Leisure">Hobbies & Leisure</option>
-                  <option value="Pet Care">Pet Care</option>
-                  <option value="Cloud Storage & Backup">
-                    Cloud Storage & Backup
-                  </option>
-                  <option value="Subscriptions & Memberships">
-                    Subscriptions & Memberships
-                  </option>
-                  <option value="Family & Child">Family & Child</option>
-                  <option value="Other">Other</option>
+                  <!-- Categories populated via JS -->
                 </select>
               </div>
 
@@ -222,7 +202,14 @@
                       class="cursor-pointer"
                     >
                       Category ↕
-                    </th> 
+                    </th>
+                    <th
+                      onclick="sortTable('type')"
+                      data-sort="type"
+                      class="cursor-pointer"
+                    >
+                      Type ↕
+                    </th>
                     <th
                       onclick="sortTable('monthlyPayment')"
                       data-sort="monthlyPayment"
@@ -335,6 +322,7 @@
                     id="importFile"
                     accept=".json"
                     style="display: none"
+                    aria-label="Import JSON Data File Attachment"
                     onchange="importData(event)"
                   />
                   <button
@@ -374,6 +362,39 @@
                   <div class="flex-between w-full mt-5">
                     <span class="text-xs">10s</span>
                     <span class="text-xs">30m</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Metadata Management -->
+              <div class="settings-card full-width-card" style="grid-column: 1 / -1;">
+                <div class="settings-card-header">
+                  <h3>🏷️ Metadata Management</h3>
+                </div>
+                <div class="metadata-grid">
+                  <div class="metadata-section">
+                    <h4>Categories</h4>
+                    <div id="categoryManager" class="metadata-list-container"></div>
+                    <div class="metadata-add-form">
+                      <input type="text" id="newCategoryInput" placeholder="New category name...">
+                      <button class="btn-success btn-small" onclick="addMetadataItem('categories')">Add</button>
+                    </div>
+                  </div>
+                  <div class="metadata-section">
+                    <h4>Account Statuses</h4>
+                    <div id="statusManager" class="metadata-list-container"></div>
+                    <div class="metadata-add-form">
+                      <input type="text" id="newStatusInput" placeholder="New status name...">
+                      <button class="btn-success btn-small" onclick="addMetadataItem('statuses')">Add</button>
+                    </div>
+                  </div>
+                  <div class="metadata-section">
+                    <h4>Criticality Levels</h4>
+                    <div id="criticalityManager" class="metadata-list-container"></div>
+                    <div class="metadata-add-form">
+                      <input type="text" id="newCriticalityInput" placeholder="New criticality level...">
+                      <button class="btn-success btn-small" onclick="addMetadataItem('criticalities')">Add</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -473,56 +494,45 @@
               />
             </div>
             <div class="form-group">
-              <label>Category *</label>
-              <select id="formCategory" required aria-label="Service Category">
-                <option value="">Select Category</option>
-                <option>Government & Legal</option>
-                <option>Health & Insurance</option>
-                <option>Banking & Finance</option>
-                <option>Utilities & Bills</option>
-                <option>Shopping & E-Commerce</option>
-                <option>Productivity & Work</option>
-                <option>Developer Tools</option>
-                <option>Entertainment & Streaming</option>
-                <option>Gaming</option>
-                <option>AI Tools</option>
-                <option>Social Media</option>
-                <option>Travel & Booking</option>
-                <option>Transportation</option>
-                <option>Food & Dining</option>
-                <option>Household & Home</option>
-                <option>Education & Learning</option>
-                <option>Health & Wellness</option>
-                <option>Clothing & Fashion</option>
-                <option>Personal Care & Beauty</option>
-                <option>Hobbies & Leisure</option>
-                <option>Pet Care</option>
-                <option>Cloud Storage & Backup</option>
-                <option>Subscriptions & Memberships</option>
-                <option>Family & Child</option>
-                <option>Other</option>
+              <label>Assigned To</label>
+              <select id="formOwner" aria-label="Assigned Profile">
+                <option value="">(Unassigned)</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Monthly Cost (€)</label>
+              <label>Category *</label>
+              <select id="formCategory" required aria-label="Service Category">
+                <option value="">Select Category</option>
+                <!-- categories populated via JS -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Transaction Type *</label>
+              <select id="formType" required aria-label="Transaction Type">
+                <option value="expense">📉 Expense</option>
+                <option value="income">📈 Income</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label id="labelMonthlyAmount">Monthly Amount (€)</label>
               <input
                 type="number"
                 id="formMonthlyCost"
                 min="0"
                 step="0.01"
                 value="0"
-                aria-label="Monthly Cost"
+                aria-label="Monthly Amount"
               />
             </div>
             <div class="form-group">
-              <label>Annual Cost (€)</label>
+              <label id="labelAnnualAmount">Annual Amount (€)</label>
               <input
                 type="number"
                 id="formAnnualCost"
                 min="0"
                 step="0.01"
                 value="0"
-                aria-label="Annual Cost"
+                aria-label="Annual Amount"
               />
             </div>
             <div class="form-group">
@@ -537,10 +547,7 @@
               <label>Status *</label>
               <select id="formStatus" required aria-label="Account Status">
                 <option value="">Select Status</option>
-                <option value="Active">Active</option>
-                <option value="Planned">Planned</option>
-                <option value="Dormant">Dormant</option>
-                <option value="Cancelled">Cancelled</option>
+                <!-- statuses populated via JS -->
               </select>
             </div>
             <div class="form-group">
@@ -551,10 +558,7 @@
                 aria-label="Criticality Level"
               >
                 <option value="">Select Level</option>
-                <option value="Critical">Critical</option>
-                <option value="Essential">Essential</option>
-                <option value="Important">Important</option>
-                <option value="Optional">Optional</option>
+                <!-- criticalities populated via JS -->
               </select>
             </div>
           </div>

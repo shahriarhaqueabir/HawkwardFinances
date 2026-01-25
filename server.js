@@ -64,6 +64,17 @@ if (!fs.existsSync(DATA_FILE)) {
     fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
 }
 
+// --- AUTO-BACKUP ON STARTUP ---
+try {
+    if (fs.existsSync(DATA_FILE)) {
+        const backupPath = path.join(__dirname, 'data.backup.json');
+        fs.copyFileSync(DATA_FILE, backupPath);
+        console.log('✅ Data backup created: data.backup.json');
+    }
+} catch (err) {
+    console.warn('⚠️ Failed to create backup:', err.message);
+}
+
 // Routes
 
 // Get all data
@@ -122,6 +133,32 @@ app.post('/api/data', (req, res) => {
     } catch (err) {
         console.error('Error saving data:', err);
         res.status(500).json({ error: 'Failed to save data' });
+    }
+});
+
+// Import data (Overwrite entire database)
+app.post('/api/import', (req, res) => {
+    try {
+        const newData = req.body;
+        
+        // Basic validation to ensure it's a valid finance app snapshot
+        if (!newData || typeof newData !== 'object') {
+            return res.status(400).json({ error: 'Invalid JSON data' });
+        }
+        
+        // Ensure core structure exists
+        if (!newData.accounts) newData.accounts = [];
+        if (!newData.profile) newData.profile = {};
+        if (!newData.timeline) newData.timeline = {};
+
+        // Write to disk
+        fs.writeFileSync(DATA_FILE, JSON.stringify(newData, null, 2));
+        console.log('🔄 Database restored from import');
+        
+        res.json({ message: 'Database restored successfully' });
+    } catch (err) {
+        console.error('Import Error:', err);
+        res.status(500).json({ error: 'Failed to import data' });
     }
 });
 

@@ -17,11 +17,11 @@ let cards = [];
 
 // Accounts Data - 5 accounts
 let accounts = [
-    [1, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [2, "Rent", "Household & Home", "CONS", 1000, 0, "Yes", "Active", "Important"],
-    [3, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Planned", "Essential"],
-    [4, "Naturstrom", "Utilities & Bills", "CONS", 40, 0, "Yes", "Active", "Important"],
-    [5, "Groceries", "Shopping & E-Commerce", "CONS", 100, 0, "Yes", "Active", "Important"]
+    [1, "Google Gemini", "AI Tools", "expense", 0, 0, "No", "Active", "Optional"],
+    [2, "Rent", "Household & Home", "expense", 1000, 0, "Yes", "Active", "Important"],
+    [3, "ChatGPT", "AI Tools", "expense", 0, 0, "No", "Planned", "Essential"],
+    [4, "Naturstrom", "Utilities & Bills", "expense", 40, 0, "Yes", "Active", "Important"],
+    [5, "Groceries", "Shopping & E-Commerce", "expense", 100, 0, "Yes", "Active", "Important"]
 ];
 
 // Convert accounts array to object format
@@ -160,7 +160,7 @@ async function importData(event) {
 
             notify('⌛ Importing data...', NOTIFICATION_TYPES.INFO);
 
-            const response = await fetch('http://localhost:3000/api/import', {
+            const response = await fetch(`${window.location.origin}/api/import`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -210,9 +210,55 @@ function validateInput(value, type = 'string', required = false) {
     return true;
 }
 
+const TOAST_ICONS = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
+};
+
 function notify(message, type = NOTIFICATION_TYPES.INFO) {
-    // Simple alert notification - can be enhanced to toast later
-    alert(message);
+    // 1. Ensure Container Exists
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    // 2. Create Toast Element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
+    
+    toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">${message}</div>
+    `;
+
+    // 3. Add to DOM
+    container.appendChild(toast);
+
+    // 4. Lifecycle Management
+    // Remove on click
+    toast.onclick = () => removeToast(toast);
+
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (document.body.contains(toast)) {
+            removeToast(toast);
+        }
+    }, 5000);
+}
+
+function removeToast(toast) {
+    toast.classList.add('hiding');
+    toast.addEventListener('animationend', () => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    });
 }
 
 function getCriticalityColor(criticality) {
@@ -237,6 +283,7 @@ const accountForm = document.getElementById('accountForm');
 const modalTitle = document.getElementById('modalTitle');
 const formService = document.getElementById('formService');
 const formCategory = document.getElementById('formCategory');
+const formType = document.getElementById('formType');
 const formMonthlyCost = document.getElementById('formMonthlyCost');
 const formAnnualCost = document.getElementById('formAnnualCost');
 const formPaid = document.getElementById('formPaid');
@@ -375,6 +422,21 @@ function renderCards() {
                 <div class="family-field">
                     <label>Microchip</label>
                     <div class="value">${card.microchip || '—'}</div>
+                </div>
+            `;
+        }
+
+        // Calculate assigned expenses
+        const assignExpenses = accounts.filter(a => a.ownerId === card.id && a.status === 'Active')
+            .reduce((sum, a) => sum + (parseFloat(a.monthlyPayment) || 0), 0);
+        
+        if (assignExpenses > 0) {
+           fieldsHTML += `
+                <div class="family-field" style="border-left: 3px solid #f87171; background: #fef2f2;">
+                    <label>Monthly Spend</label>
+                    <div class="value" style="color: #dc2626; font-weight: 800;">
+                        ${TIMELINE_CONFIG.currency}${assignExpenses.toLocaleString()}
+                    </div>
                 </div>
             `;
         }
@@ -606,6 +668,7 @@ function saveCard() {
         .then(() => {
             closeCardModal();
             renderCards();
+            updateStats(); // Refresh stats in case income changed
             notify(editingCardId ? '✅ Profile updated!' : '✅ Profile created!', NOTIFICATION_TYPES.SUCCESS);
         })
         .catch(err => {
@@ -621,10 +684,31 @@ function deleteCard(cardId) {
     if (confirm(`Delete profile for "${card.displayName}"?`)) {
         cards = cards.filter(c => c.id !== cardId);
 
-        saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards')
+        // Disassociate assigned accounts
+        let accountsUpdated = false;
+        accounts.forEach(acc => {
+            if (acc.ownerId === cardId) {
+                acc.ownerId = null;
+                accountsUpdated = true;
+            }
+        });
+
+        const promises = [
+            saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards')
+        ];
+
+        if (accountsUpdated) {
+            promises.push(saveToIndexedDB(DB_CONFIG.stores.accounts, accounts, 'allAccounts'));
+        }
+
+        Promise.all(promises)
             .then(() => {
                 renderCards();
-                notify(`✅ Profile deleted!`, NOTIFICATION_TYPES.SUCCESS);
+                // Re-render accounts table if it's visible, as ownership changed (though not visible in table yet, good for consistency)
+                // If we added owner column to table, this would be crucial.
+                renderAccounts(); 
+                updateStats(); // Refresh stats
+                notify(`✅ Profile deleted! Assigned expenses are now unassigned.`, NOTIFICATION_TYPES.SUCCESS);
             })
             .catch(err => {
                 notify(MESSAGES.saveError, NOTIFICATION_TYPES.WARNING);
@@ -635,9 +719,14 @@ function deleteCard(cardId) {
 // ==================== ACCOUNTS MANAGEMENT ====================
 
 function createAccountRow(row) {
-    const { id, name, category, monthlyPayment, annualPayment, hasReminder, status, priority } = row;
+    const { id, name, category, type, monthlyPayment, annualPayment, hasReminder, status, priority } = row;
     const tr = document.createElement('tr');
     
+    // Type handling
+    const isIncome = type === 'income';
+    const typeLabel = isIncome ? 'INCOME' : 'EXPENSE';
+    const typeClass = isIncome ? 'type-income' : 'type-expense';
+
     // Convert status/paid/criticality to lowecase for CSS classes
     const statusClass = `status-${status.toLowerCase()}`;
     const paidClass = hasReminder === "Yes" ? "status-paid" : "status-unpaid";
@@ -653,8 +742,11 @@ function createAccountRow(row) {
         <td class="col-category">
             <span class="badge badge-outline category-badge">${category}</span>
         </td>
-        <td class="col-cost tabular">${TIMELINE_CONFIG.currency}${monthlyPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-        <td class="col-cost tabular">${TIMELINE_CONFIG.currency}${annualPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td class="col-type">
+            <span class="badge ${typeClass}">${typeLabel}</span>
+        </td>
+        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${TIMELINE_CONFIG.currency}${monthlyPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${TIMELINE_CONFIG.currency}${annualPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         <td class="col-paid">
             <span class="badge ${paidClass}">${hasReminder === "Yes" ? "PAID" : "UNPAID"}</span>
         </td>
@@ -688,9 +780,26 @@ function toggleAddForm() {
     editingAccountId = null;
     modalTitle.textContent = '➕ Add New Account';
 
+    // Populate Owner Dropdown
+    const ownerSelect = document.getElementById('formOwner');
+    if (ownerSelect) {
+        ownerSelect.innerHTML = '<option value="">(Unassigned)</option>';
+        cards.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.emoji} ${c.displayName}`;
+            ownerSelect.appendChild(opt);
+        });
+    }
+
+    // Populate dynamic dropdowns
+    populateAccountFormDropdowns();
+
     // Manually reset form fields since accountForm is a div, not a form element
     formService.value = '';
     formCategory.value = '';
+    if (formType) formType.value = 'expense';
+    if (ownerSelect) ownerSelect.value = '';
     formMonthlyCost.value = '0';
     formAnnualCost.value = '0';
     formPaid.value = '';
@@ -705,16 +814,38 @@ function editAccount(id) {
     if (!account) return;
 
     editingAccountId = id;
-    const { name: service, category, monthlyPayment: monthlyCost, annualPayment: annualCost, hasReminder: paid, status, priority: criticality } = account;
+    const { name: service, category, type, monthlyPayment: monthlyCost, annualPayment: annualCost, hasReminder: paid, status, priority: criticality, ownerId } = account;
 
     modalTitle.textContent = `✏️ Edit Account: ${service}`;
     formService.value = service;
     formCategory.value = category;
+    if (formType) formType.value = type || 'expense';
     formMonthlyCost.value = monthlyCost;
     formAnnualCost.value = annualCost;
     formPaid.value = paid;
     formStatus.value = status;
     formCriticality.value = criticality;
+
+    // Populate dynamic dropdowns
+    populateAccountFormDropdowns();
+
+    // Preserve the current values after population
+    formCategory.value = category;
+    formStatus.value = status;
+    formCriticality.value = criticality;
+
+    // Populate Owner Dropdown and Value
+    const ownerSelect = document.getElementById('formOwner');
+    if (ownerSelect) {
+        ownerSelect.innerHTML = '<option value="">(Unassigned)</option>';
+        cards.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.textContent = `${c.emoji} ${c.displayName}`;
+            ownerSelect.appendChild(opt);
+        });
+        ownerSelect.value = ownerId || '';
+    }
 
     accountModal.classList.add('active');
 }
@@ -722,11 +853,13 @@ function editAccount(id) {
 function saveAccount() {
     const service = formService?.value.trim();
     const category = formCategory?.value;
+    const type = formType?.value || 'expense';
     const monthlyCost = parseFloat(formMonthlyCost?.value) || 0;
     const annualCost = parseFloat(formAnnualCost?.value) || 0;
     const paid = formPaid?.value;
     const status = formStatus?.value;
     const criticality = formCriticality?.value;
+    const ownerId = document.getElementById('formOwner')?.value || null;
 
     if (!validateInput(service, 'string', true) || !category || !paid || !status || !criticality) {
         notify(MESSAGES.fillRequired, NOTIFICATION_TYPES.ERROR);
@@ -747,11 +880,13 @@ function saveAccount() {
             ...accounts[index],
             name: service,
             category,
+            type,
             monthlyPayment: monthlyCost,
             annualPayment: annualCost,
             hasReminder: paid,
             status,
-            priority: criticality
+            priority: criticality,
+            ownerId
         };
     } else {
         // Add new
@@ -760,12 +895,13 @@ function saveAccount() {
             id: newId,
             name: service,
             category,
-            type: 'CONS',
+            type,
             monthlyPayment: monthlyCost,
             annualPayment: annualCost,
             hasReminder: paid,
             status,
-            priority: criticality
+            priority: criticality,
+            ownerId
         });
     }
 
@@ -773,6 +909,12 @@ function saveAccount() {
         .then(() => {
             closeAccountModal();
             renderAccounts();
+            
+            // Also re-render profiles if on that tab to show updated numbers
+            if (document.getElementById('profile').classList.contains('active')) {
+                renderCards();
+            }
+
             updateStats();
             initCharts();
             notify(MESSAGES.accountSaved, NOTIFICATION_TYPES.SUCCESS);
@@ -846,11 +988,21 @@ function sortTable(column) {
 
     // Sort the accounts array
     accounts.sort((a, b) => {
-        let valueA = a[column];
-        let valueB = b[column];
+        let valueA = a[column] || '';
+        let valueB = b[column] || '';
 
-        // Handle different data types
-        if (typeof valueA === 'string') {
+        // Handle property name mapping for sorting
+        if (column === 'service') { // Should be mapped from the header data-sort attribute if it differs
+             // The column name passed in is usually the key in the object, so checking headers is key.
+             // Looking at HTML, the header for name has onclick="sortTable('name')". 
+             // Wait, looking at Step 409, the first th has: onclick="sortTable('id')".
+             // The second th has: onclick="sortTable('name')" ... wait, no.
+             // Line 197 in Step 409 says "Service Name". The th isn't fully visible.
+             // Let's assume standard keys.
+        }
+
+        // Handle numeric/string types
+        if (typeof valueA === 'string' && typeof valueB === 'string') {
             valueA = valueA.toLowerCase();
             valueB = valueB.toLowerCase();
         }
@@ -875,19 +1027,34 @@ function sortTable(column) {
 
 function updateStats() {
     const totalAccounts = accounts.length;
-    const paidSubscriptions = accounts.filter(acc => acc.hasReminder === 'Yes').length;
-    const monthlyCost = accounts.reduce((sum, acc) => sum + acc.monthlyPayment, 0);
-    const annualCost = accounts.reduce((sum, acc) => sum + acc.annualPayment, 0);
+    
+    // Calculate income from accounts (e.g. side hustles)
+    const accountMonthlyIncome = accounts.filter(acc => acc.type === 'income' && acc.status === 'Active')
+        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
+    
+    // Calculate monthly income from ALL profiles
+    const profileMonthlyIncome = cards.reduce((sum, card) => sum + (parseFloat(card.income) || 0), 0) / 12;
+    
+    const totalMonthlyIncome = accountMonthlyIncome + profileMonthlyIncome;
+    
+    const totalMonthlyExpense = accounts.filter(acc => (acc.type === 'expense' || !acc.type) && acc.status === 'Active')
+        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
+    
+    const netFlow = totalMonthlyIncome - totalMonthlyExpense;
 
     const totalAccountsEl = document.getElementById('totalAccounts');
-    const paidSubscriptionsEl = document.getElementById('paidSubscriptions');
-    const monthlyCostEl = document.getElementById('monthlyCost');
-    const annualCostEl = document.getElementById('annualCost');
+    const incomeEl = document.getElementById('statMonthlyIncome');
+    const expenseEl = document.getElementById('statMonthlyExpense');
+    const netFlowEl = document.getElementById('statNetFlow');
 
     if (totalAccountsEl) totalAccountsEl.textContent = totalAccounts;
-    if (paidSubscriptionsEl) paidSubscriptionsEl.textContent = paidSubscriptions;
-    if (monthlyCostEl) monthlyCostEl.textContent = `${TIMELINE_CONFIG.currency}${monthlyCost.toFixed(2)}`;
-    if (annualCostEl) annualCostEl.textContent = `${TIMELINE_CONFIG.currency}${annualCost.toFixed(2)}`;
+    if (incomeEl) incomeEl.textContent = `${TIMELINE_CONFIG.currency}${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    if (expenseEl) expenseEl.textContent = `${TIMELINE_CONFIG.currency}${totalMonthlyExpense.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    
+    if (netFlowEl) {
+        netFlowEl.textContent = `${TIMELINE_CONFIG.currency}${netFlow.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        netFlowEl.className = 'stat-value ' + (netFlow >= 0 ? 'net-flow-positive' : 'net-flow-negative');
+    }
 }
 
 // ==================== CHARTS ====================
@@ -897,6 +1064,7 @@ let categoryChartInstance = null;
 let costChartInstance = null;
 let criticalityChartInstance = null;
 let statusChartInstance = null;
+let cashFlowChartInstance = null;
 
 function initCharts() {
     // Check if Chart.js is loaded
@@ -918,17 +1086,32 @@ function initCharts() {
 
     // Aggregating Data
     const categoryCounts = {};
-    const categoryCosts = {};
+    const categoryExpenseCosts = {};
     const criticalityCounts = { 'Critical': 0, 'Essential': 0, 'Important': 0, 'Optional': 0 };
     const statusCounts = { 'Active': 0, 'Planned': 0, 'Dormant': 0, 'Cancelled': 0 };
+    
+    let chartAccountIncome = 0;
+    let chartAccountExpense = 0;
 
     accounts.forEach(acc => {
-        const { category, monthlyPayment, status, priority } = acc;
+        const { category, monthlyPayment, status, priority, type } = acc;
+        const isIncome = type === 'income';
+        
         categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-        categoryCosts[category] = (categoryCosts[category] || 0) + monthlyPayment;
+        
+        if (isIncome) {
+            chartAccountIncome += (parseFloat(monthlyPayment) || 0);
+        } else {
+            chartAccountExpense += (parseFloat(monthlyPayment) || 0);
+            categoryExpenseCosts[category] = (categoryExpenseCosts[category] || 0) + (parseFloat(monthlyPayment) || 0);
+        }
+
         if (criticalityCounts.hasOwnProperty(priority)) criticalityCounts[priority]++;
         if (statusCounts.hasOwnProperty(status)) statusCounts[status]++;
     });
+
+    const profileIncome = cards.reduce((sum, c) => sum + (parseFloat(c.income) || 0), 0) / 12;
+    const totalIncome = chartAccountIncome + profileIncome;
 
     // 1. Accounts by Category (Horizontal Bar - Sorted)
     const sortedCategories = Object.entries(categoryCounts)
@@ -961,8 +1144,8 @@ function initCharts() {
         });
     }
 
-    // 2. Monthly Cost Distribution (Horizontal Bar - Sorted by Cost)
-    const sortedCosts = Object.entries(categoryCosts)
+    // 2. Monthly Expense Distribution (Horizontal Bar - Sorted by Cost)
+    const sortedCosts = Object.entries(categoryExpenseCosts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 10); // Top 10 expensive categories
 
@@ -974,9 +1157,9 @@ function initCharts() {
             data: {
                 labels: sortedCosts.map(i => i[0]),
                 datasets: [{
-                    label: `Monthly Cost (${TIMELINE_CONFIG.currency})`,
+                    label: `Monthly Expense (${TIMELINE_CONFIG.currency})`,
                     data: sortedCosts.map(i => i[1]),
-                    backgroundColor: COLORS.primary,
+                    backgroundColor: COLORS.danger + 'bb', // Subtle red
                     borderRadius: 4
                 }]
             },
@@ -987,6 +1170,38 @@ function initCharts() {
                 scales: {
                     x: { beginAtZero: true },
                     y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // 2.5 Cash Flow Comparison (Income vs Expense)
+    const flowCtx = document.getElementById('cashFlowChart');
+    if (flowCtx) {
+        if (cashFlowChartInstance) cashFlowChartInstance.destroy();
+        cashFlowChartInstance = new Chart(flowCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Monthly Cash Flow'],
+                datasets: [
+                    {
+                        label: 'Total Income',
+                        data: [totalIncome],
+                        backgroundColor: COLORS.success,
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Total Expense',
+                        data: [chartAccountExpense],
+                        backgroundColor: COLORS.danger,
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
                 }
             }
         });
@@ -1087,7 +1302,20 @@ function getTimelineYears() {
     return [currentYear - 1, currentYear, currentYear + 1];
 }
 
+function calculateBaseMonthlyValues() {
+    const accountMonthlyIncome = accounts.filter(acc => acc.type === 'income' && acc.status === 'Active')
+        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
+    const profileMonthlyIncome = cards.reduce((sum, card) => sum + (parseFloat(card.income) || 0), 0) / 12;
+    const totalIncome = accountMonthlyIncome + profileMonthlyIncome;
+
+    const totalExpense = accounts.filter(acc => (acc.type === 'expense' || !acc.type) && acc.status === 'Active')
+        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
+    
+    return { totalIncome, totalExpense };
+}
+
 function generateMonthData(years) {
+    const { totalIncome, totalExpense } = calculateBaseMonthlyValues();
     const months = [
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
@@ -1101,8 +1329,8 @@ function generateMonthData(years) {
                 year: year,
                 month: month,
                 display: `${year} - ${month}`,
-                income: TIMELINE_CONFIG.defaultMonthlyIncome,
-                expenses: 0
+                income: parseFloat(totalIncome.toFixed(2)),
+                expenses: parseFloat(totalExpense.toFixed(2))
             });
         });
     });
@@ -1258,6 +1486,16 @@ function saveTimelineData() {
         });
 }
 
+function autoPopulateTimeline() {
+    if (confirm('This will update all months in the table with your current monthly Income and Expenses. Manual overrides will be lost. Proceed?')) {
+        const years = getTimelineYears();
+        const timelineData = generateMonthData(years);
+        renderTimelineTable(timelineData);
+        saveTimelineData(); // Auto save the new populated data
+        notify('✅ Timeline refreshed from current finances!', NOTIFICATION_TYPES.SUCCESS);
+    }
+}
+
 function renderBalanceChart(timelineData) {
     const withBalances = calculateBalances(timelineData);
     const ctx = document.getElementById('balanceChart');
@@ -1392,6 +1630,110 @@ function syncSettingsUI() {
             });
         }
     }
+
+    renderMetadataManagers();
+}
+
+function renderMetadataManagers() {
+    const renderList = (type, containerId) => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        const items = appSettings[type] || [];
+        container.innerHTML = items.map((item, index) => `
+            <div class="metadata-item">
+                <span>${item}</span>
+                <div class="metadata-item-actions">
+                    <button class="btn-tiny" onclick="editMetadataItem('${type}', ${index})">✏️</button>
+                    <button class="btn-tiny delete" onclick="deleteMetadataItem('${type}', ${index})">🗑️</button>
+                </div>
+            </div>
+        `).join('');
+
+        // Also update any dropdowns that need this data immediately
+        if (type === 'categories') {
+            const filter = document.getElementById('categoryFilter');
+            if (filter) {
+                const currentVal = filter.value;
+                filter.innerHTML = '<option value="">All Categories</option>' + 
+                    items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                filter.value = currentVal;
+            }
+        }
+    };
+
+    renderList('categories', 'categoryManager');
+    renderList('statuses', 'statusManager');
+    renderList('criticalities', 'criticalityManager');
+}
+
+function addMetadataItem(type) {
+    const inputId = type === 'categories' ? 'newCategoryInput' : 
+                   type === 'statuses' ? 'newStatusInput' : 'newCriticalityInput';
+    const input = document.getElementById(inputId);
+    const value = input?.value.trim();
+
+    if (!value) return;
+    if (!appSettings[type]) appSettings[type] = [];
+    
+    if (appSettings[type].includes(value)) {
+        notify('This item already exists', NOTIFICATION_TYPES.WARNING);
+        return;
+    }
+
+    appSettings[type].push(value);
+    input.value = '';
+    
+    renderMetadataManagers();
+    saveSettings();
+    notify('✅ Item added', NOTIFICATION_TYPES.SUCCESS);
+}
+
+function deleteMetadataItem(type, index) {
+    const item = appSettings[type][index];
+    if (confirm(`Are you sure you want to delete "${item}"?`)) {
+        appSettings[type].splice(index, 1);
+        renderMetadataManagers();
+        saveSettings();
+        notify('✅ Item deleted', NOTIFICATION_TYPES.SUCCESS);
+    }
+}
+
+function editMetadataItem(type, index) {
+    const oldVal = appSettings[type][index];
+    const newVal = prompt(`Edit ${type.slice(0, -1)}:`, oldVal);
+    
+    if (newVal && newVal.trim() !== '' && newVal !== oldVal) {
+        appSettings[type][index] = newVal.trim();
+        renderMetadataManagers();
+        saveSettings();
+        notify('✅ Item updated', NOTIFICATION_TYPES.SUCCESS);
+    }
+}
+
+function populateAccountFormDropdowns() {
+    const catSelect = document.getElementById('formCategory');
+    const statusSelect = document.getElementById('formStatus');
+    const critSelect = document.getElementById('formCriticality');
+
+    if (catSelect) {
+        const current = catSelect.value;
+        catSelect.innerHTML = '<option value="">Select Category</option>' + 
+            (appSettings.categories || []).map(c => `<option value="${c}">${c}</option>`).join('');
+        catSelect.value = current;
+    }
+    if (statusSelect) {
+        const current = statusSelect.value;
+        statusSelect.innerHTML = '<option value="">Select Status</option>' + 
+            (appSettings.statuses || []).map(s => `<option value="${s}">${s}</option>`).join('');
+        statusSelect.value = current;
+    }
+    if (critSelect) {
+        const current = critSelect.value;
+        critSelect.innerHTML = '<option value="">Select Level</option>' + 
+            (appSettings.criticalities || []).map(c => `<option value="${c}">${c}</option>`).join('');
+        critSelect.value = current;
+    }
 }
 
 function applySettings() {
@@ -1408,7 +1750,11 @@ function applySettings() {
     // 3. Update Timeline Currency (in-memory)
     TIMELINE_CONFIG.currency = appSettings.currency;
 
-    // 4. Sync with Server
+    // 4. Update dynamic UI elements
+    renderMetadataManagers();
+    populateAccountFormDropdowns();
+
+    // 5. Sync with Server
     fetch(`${window.location.origin}/api/settings/system`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1570,24 +1916,34 @@ Promise.all([
 });
 }
 const SEED_DATA = [
-    [1, "Google Gemini", "AI Tools", "CONS", 0, 0, "No", "Active", "Optional"],
-    [2, "Rent", "Household & Home", "CONS", 1000, 0, "Yes", "Active", "Important"],
-    [3, "ChatGPT", "AI Tools", "CONS", 0, 0, "No", "Planned", "Optional"],
-    [4, "Naturstrom", "Utilities & Bills", "CONS", 40, 0, "Yes", "Active", "Important"],
-    [5, "Groceries", "Shopping & E-Commerce", "CONS", 100, 0, "Yes", "Active", "Important"]
+    [1, "Google Gemini", "AI Tools", "expense", 0, 0, "No", "Active", "Optional"],
+    [2, "Rent", "Household & Home", "expense", 1000, 0, "Yes", "Active", "Important"],
+    [3, "ChatGPT", "AI Tools", "expense", 0, 0, "No", "Planned", "Optional"],
+    [4, "Naturstrom", "Utilities & Bills", "expense", 40, 0, "Yes", "Active", "Important"],
+    [5, "Groceries", "Shopping & E-Commerce", "expense", 100, 0, "Yes", "Active", "Important"]
 ];
 
 function downloadCSV() {
-    const headers = ['ID', 'Service', 'Category', 'MonthlyCost', 'AnnualCost', 'Status', 'Criticality'];
-    const rows = accounts.map(a => [
-        a.id, 
-        `"${a.name}"`, 
-        `"${a.category}"`, 
-        a.monthlyPayment, 
-        a.annualPayment, 
-        a.status, 
-        a.priority
-    ]);
+    const headers = ['ID', 'Service', 'Category', 'Type', 'MonthlyAmount', 'AnnualAmount', 'Status', 'Criticality', 'AssignedTo'];
+    const rows = accounts.map(a => {
+        let ownerName = 'Unassigned';
+        if (a.ownerId) {
+            const owner = cards.find(c => c.id === a.ownerId);
+            if (owner) ownerName = owner.displayName;
+        }
+        
+        return [
+            a.id, 
+            `"${a.name}"`, 
+            `"${a.category}"`, 
+            `"${a.type || 'expense'}"`,
+            a.monthlyPayment, 
+            a.annualPayment, 
+            a.status, 
+            a.priority,
+            `"${ownerName}"`
+        ];
+    });
     
     let csvContent = "data:text/csv;charset=utf-8," 
         + headers.join(",") + "\n"
@@ -1606,6 +1962,22 @@ function downloadCSV() {
 
 if (saveTimelineBtn) {
     saveTimelineBtn.addEventListener('click', saveTimelineData);
+}
+
+// Auto-update Paid status based on costs
+if (formMonthlyCost) {
+    formMonthlyCost.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (val > 0) formPaid.value = 'Yes';
+        else if (formAnnualCost && parseFloat(formAnnualCost.value) === 0) formPaid.value = 'No';
+    });
+}
+if (formAnnualCost) {
+    formAnnualCost.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (val > 0) formPaid.value = 'Yes';
+        else if (formMonthlyCost && parseFloat(formMonthlyCost.value) === 0) formPaid.value = 'No';
+    });
 }
 
 // ==================== INITIALIZATION ====================

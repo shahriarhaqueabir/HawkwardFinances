@@ -21,7 +21,18 @@ const DEFAULT_SETTINGS = {
     primaryColor: '#6366f1',
     currency: '€',
     heartbeatTimeout: 15, // Seconds
-    autoShutdown: true
+    autoShutdown: true,
+    categories: [
+        'Government & Legal', 'Health & Insurance', 'Banking & Finance', 'Utilities & Bills',
+        'Shopping & E-Commerce', 'Productivity & Work', 'Developer Tools',
+        'Entertainment & Streaming', 'Gaming', 'AI Tools', 'Social Media',
+        'Travel & Booking', 'Transportation', 'Food & Dining', 'Household & Home',
+        'Education & Learning', 'Health & Wellness', 'Clothing & Fashion',
+        'Personal Care & Beauty', 'Hobbies & Leisure', 'Pet Care',
+        'Cloud Storage & Backup', 'Subscriptions & Memberships', 'Family & Child', 'Other'
+    ],
+    statuses: ['Active', 'Planned', 'Dormant', 'Cancelled'],
+    criticalities: ['Critical', 'Essential', 'Important', 'Optional']
 };
 
 // Design System - Colors
@@ -90,41 +101,6 @@ const TIMELINE_CONFIG = {
     defaultMonthlyIncome: 0,
     currency: '€'
 };
-
-// Account Categories
-const ACCOUNT_CATEGORIES = [
-    'Government & Legal',
-    'Health & Insurance',
-    'Banking & Finance',
-    'Utilities & Bills',
-    'Shopping & E-Commerce',
-    'Productivity & Work',
-    'Developer Tools',
-    'Entertainment & Streaming',
-    'Gaming',
-    'AI Tools',
-    'Social Media',
-    'Travel & Booking',
-    'Transportation',
-    'Food & Dining',
-    'Household & Home',
-    'Education & Learning',
-    'Health & Wellness',
-    'Clothing & Fashion',
-    'Personal Care & Beauty',
-    'Hobbies & Leisure',
-    'Pet Care',
-    'Cloud Storage & Backup',
-    'Subscriptions & Memberships',
-    'Family & Child',
-    'Other'
-];
-
-// Account Status Options
-const ACCOUNT_STATUSES = ['Active', 'Planned', 'Dormant', 'Cancelled'];
-
-// Criticality Levels
-const CRITICALITY_LEVELS = ['Critical', 'Essential', 'Important', 'Optional'];
 
 // Tab Titles
 const TAB_TITLES = {
