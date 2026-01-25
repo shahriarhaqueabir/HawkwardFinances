@@ -19,6 +19,16 @@
         "fullName": "Nuka",
         "dateOfBirth": "2023-03-01",
         "breed": "German Shepherd/Border Collie"
+      },
+      {
+        "id": "card_1769286864761",
+        "type": "child",
+        "emoji": "👶",
+        "displayName": "Child",
+        "fullName": "Khalil",
+        "dateOfBirth": "2021-01-16",
+        "school": "Kita",
+        "interests": "Car friends"
       }
     ]
   },

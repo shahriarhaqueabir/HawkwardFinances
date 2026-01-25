@@ -221,7 +221,7 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--color-border);
-  overflow: hidden;
+  overflow: auto;
   margin-bottom: 32px;
 }
 
