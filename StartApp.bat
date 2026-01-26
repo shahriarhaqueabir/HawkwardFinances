@@ -20,7 +20,7 @@ if exist "%NODE_EXE%" (
 )
 
 :: 2. Check for system Node.js
-where node >nul 2>1
+where node >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
     echo [INFO] Local runtime missing, but system Node.js found.
     goto :LINT_CHECK

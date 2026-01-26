@@ -25,7 +25,7 @@ const DATA_FILE = path.join(__dirname, 'data.json');
 
 // --- AUTO-SHUTDOWN LOGIC ---
 let shutdownTimer;
-let SHUTDOWN_TIMEOUT = 10000; // 10 seconds after last heartbeat
+let SHUTDOWN_TIMEOUT = 10000; // 10 seconds after last heartbeat (Standardized)
 let AUTO_SHUTDOWN_ENABLED = true;
 
 function resetShutdownTimer() {
@@ -38,11 +38,6 @@ function resetShutdownTimer() {
   }, SHUTDOWN_TIMEOUT);
 }
 
-// Heartbeat endpoint
-app.post("/api/heartbeat", (req, res) => {
-  resetShutdownTimer();
-  res.json({ status: "alive" });
-});
 
 // Start the timer immediately
 resetShutdownTimer();
@@ -59,9 +54,22 @@ if (!fs.existsSync(DATA_FILE)) {
     const initialData = {
         accounts: [],
         profile: {},
-        timeline: {}
+        timeline: {},
+        goals: [],
+        settings: {}
     };
     fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
+}
+
+// --- AUTO-BACKUP ON STARTUP ---
+try {
+    if (fs.existsSync(DATA_FILE)) {
+        const backupPath = path.join(__dirname, 'data.backup.json');
+        fs.copyFileSync(DATA_FILE, backupPath);
+        console.log('✅ Data backup created: data.backup.json');
+    }
+} catch (err) {
+    console.warn('⚠️ Failed to create backup:', err.message);
 }
 
 // Routes
@@ -73,7 +81,33 @@ app.get('/api/data', (req, res) => {
         res.json(JSON.parse(data));
     } catch (err) {
         console.error('Error reading/parsing data:', err);
-        res.status(500).json({ error: 'Failed to process data' });
+        
+        // Attempt to restore from backup
+        const backupPath = path.join(__dirname, 'data.backup.json');
+        if (fs.existsSync(backupPath)) {
+            try {
+                console.log('⚠️ Data corrupted. Attempting to restore from backup...');
+                const backup = fs.readFileSync(backupPath, 'utf8');
+                const backupData = JSON.parse(backup);
+                
+                // Restore the backup to main file
+                fs.writeFileSync(DATA_FILE, backup);
+                console.log('✅ Successfully restored from backup');
+                
+                res.json(backupData);
+            } catch (backupErr) {
+                console.error('❌ Backup restoration failed:', backupErr);
+                res.status(500).json({ 
+                    error: 'Data corrupted and backup restoration failed',
+                    details: backupErr.message 
+                });
+            }
+        } else {
+            res.status(500).json({ 
+                error: 'Data corrupted and no backup available',
+                details: err.message 
+            });
+        }
     }
 });
 
@@ -122,6 +156,34 @@ app.post('/api/data', (req, res) => {
     } catch (err) {
         console.error('Error saving data:', err);
         res.status(500).json({ error: 'Failed to save data' });
+    }
+});
+
+// Import data (Overwrite entire database)
+app.post('/api/import', (req, res) => {
+    try {
+        const newData = req.body;
+        
+        // Basic validation to ensure it's a valid finance app snapshot
+        if (!newData || typeof newData !== 'object') {
+            return res.status(400).json({ error: 'Invalid JSON data' });
+        }
+        
+        // Create safety backup before overwriting
+        const safetyBackupPath = path.join(__dirname, 'data.import_safety.json');
+        if (fs.existsSync(DATA_FILE)) {
+            fs.copyFileSync(DATA_FILE, safetyBackupPath);
+            console.log('🛡️ Import safety backup created: data.import_safety.json');
+        }
+
+        // Write to disk
+        fs.writeFileSync(DATA_FILE, JSON.stringify(newData, null, 2));
+        console.log('🔄 Database restored from import');
+        
+        res.json({ message: 'Database restored successfully (Safety backup created)' });
+    } catch (err) {
+        console.error('Import Error:', err);
+        res.status(500).json({ error: 'Failed to import data' });
     }
 });
 
