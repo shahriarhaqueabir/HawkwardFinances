@@ -11,6 +11,7 @@ const DB_CONFIG = {
         accounts: 'accounts',
         profile: 'profile',
         timeline: 'timeline',
+        goals: 'goals',
         settings: 'settings'
     }
 };
@@ -20,133 +21,92 @@ const DEFAULT_SETTINGS = {
     theme: 'light',
     primaryColor: '#6366f1',
     currency: '€',
-    heartbeatTimeout: 15, // Seconds
+    heartbeatTimeout: 10, // seconds until auto-shutdown warning
     autoShutdown: true,
     categories: [
-        'Government & Legal', 'Health & Insurance', 'Banking & Finance', 'Utilities & Bills',
-        'Shopping & E-Commerce', 'Productivity & Work', 'Developer Tools',
-        'Entertainment & Streaming', 'Gaming', 'AI Tools', 'Social Media',
-        'Travel & Booking', 'Transportation', 'Food & Dining', 'Household & Home',
-        'Education & Learning', 'Health & Wellness', 'Clothing & Fashion',
-        'Personal Care & Beauty', 'Hobbies & Leisure', 'Pet Care',
-        'Cloud Storage & Backup', 'Subscriptions & Memberships', 'Family & Child', 'Other'
+        "Productivity & Work",
+        "Household & Home",
+        "Utility Services",
+        "Health & Wellness",
+        "Automotive & Transport",
+        "Financial & Insurance",
+        "Family & Kids",
+        "Education & Learning",
+        "Entertainment & Streaming",
+        "News & Reading",
+        "Food & Dining",
+        "Tech & Software",
+        "Shopping & E-Commerce",
+        "Social & Communication",
+        "Travel & Lifestyle",
+        "Donations & Charity",
+        "Other"
     ],
-    statuses: ['Active', 'Planned', 'Dormant', 'Cancelled'],
-    criticalities: ['Critical', 'Essential', 'Important', 'Optional']
+    statuses: ["Active", "Planned", "Dormant", "Cancelled"],
+    criticalities: ["Critical", "Essential", "Important", "Optional"]
 };
 
-// Design System - Colors
-const COLORS = {
-    primary: '#667eea',
-    success: '#48bb78',
-    danger: '#dc2626',
-    warning: '#f59e0b',
-    info: '#06b6d4',
-    textDark: '#2d3748',
-    textLight: '#718096',
-    bgLight: '#f5f5f5',
-    border: '#e0e0e0',
-    bgWhite: '#ffffff',
-
-    // Family card gradients
-    myselfGradient: 'rgba(102, 126, 234, 0.05)',
-    sonGradient: 'rgba(72, 187, 120, 0.05)',
-    dogGradient: 'rgba(245, 158, 11, 0.05)',
-
-    // Status colors
-    criticalBg: '#fee2e2',
-    essentialBg: '#fef3c7',
-    importantBg: '#e0e7ff',
-    optionalBg: '#e0f2fe',
-
-    // Chart colors
-    chartPalette: ['#667eea', '#764ba2', '#48bb78', '#f59e0b', '#dc2626', '#06b6d4', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#6366f1', '#84cc16']
-};
-
-// Design System - Spacing & Sizing
-const DESIGN = {
-    spacing: {
-        xs: '4px',
-        sm: '8px',
-        md: '12px',
-        lg: '15px',
-        xl: '20px',
-        xxl: '25px',
-        xxxl: '30px'
-    },
-    sizing: {
-        sidebarWidth: '280px',
-        cardMinWidth: '300px',
-        modalMaxWidth: '600px',
-        chartHeight: '400px',
-        chartHeightTall: '450px',
-        tableRowHeight: '12px'
-    },
-    borderRadius: {
-        sm: '4px',
-        md: '6px',
-        lg: '12px',
-        xl: '16px'
-    },
-    transitions: {
-        fast: '0.2s ease',
-        standard: '0.3s ease',
-        slow: '0.5s ease'
-    }
-};
+// Common Expense Templates (Quick Presets)
+const ACCOUNT_TEMPLATES = [
+    { name: "Rent / Mortgage", category: "Household & Home", type: "expense", priority: "Critical" },
+    { name: "Electricity Bill", category: "Utilities & Bills", type: "expense", priority: "Critical" },
+    { name: "Internet / Wi-Fi", category: "Utilities & Bills", type: "expense", priority: "Essential" },
+    { name: "Groceries", category: "Food & Dining", type: "expense", priority: "Critical" },
+    { name: "Phone Bill", category: "Utilities & Bills", type: "expense", priority: "Essential" },
+    { name: "Public Transport Ticket", category: "Transportation", type: "expense", priority: "Essential" },
+    { name: "Netflix", category: "Entertainment & Streaming", type: "expense", priority: "Optional" },
+    { name: "Spotify", category: "Entertainment & Streaming", type: "expense", priority: "Optional" },
+    { name: "Gym Membership", category: "Health & Wellness", type: "expense", priority: "Important" },
+    { name: "Amazon Prime", category: "Shopping & E-Commerce", type: "expense", priority: "Optional" },
+    { name: "ChatGPT Plus", category: "AI Tools", type: "expense", priority: "Optional" },
+    { name: "GitHub Copilot", category: "Developer Tools", type: "expense", priority: "Important" },
+    { name: "Salary", category: "Productivity & Work", type: "income", priority: "Critical" },
+    { name: "Freelance Income", category: "Productivity & Work", type: "income", priority: "Important" }
+];
 
 // Timeline Configuration
 const TIMELINE_CONFIG = {
-    defaultStartingBalance: 0,
-    defaultMonthlyIncome: 0,
+    monthsToProject: 36, // 3 years
+    defaultMonthlyIncome: 3000,
+    defaultMonthlyExpenses: 2000,
+    defaultStartingBalance: 5000,
     currency: '€'
+};
+
+// Application Messages
+const MESSAGES = {
+    saveSuccess: '✅ Data saved successfully!',
+    saveError: '❌ Error saving data. Please check console.',
+    deleteConfirm: (name) => `Are you sure you want to delete "${name}"?`,
+    resetConfirm: '⚠️ This will wipe all data and reset to defaults. This cannot be undone. Proceed?',
+    fillRequired: '⚠️ Please fill all required fields.',
+    invalidCosts: '⚠️ Please enter valid numeric costs.',
+    heartbeatWarning: '⚠️ Connection lost! Server may be offline.',
+    accountDeleted: '🗑️ Account deleted.',
+    accountSaved: '✅ Account saved!'
+};
+
+// UI Colors (Chart Use)
+const COLORS = {
+    primary: '#6366f1',
+    success: '#10b981',
+    danger: '#ef4444',
+    warning: '#f59e0b',
+    info: '#3b82f6',
+    chartPalette: [
+        '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e',
+        '#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981',
+        '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6'
+    ]
 };
 
 // Tab Titles
 const TAB_TITLES = {
-    profile: '👤 Profiles',
+    profile: '👤 My Cards',
+    accounts: '📋 Balance',
     timeline: '📅 Timeline',
     analytics: '📊 Reports',
-    accounts: '📋 Expenses',
     settings: '⚙️ Settings'
-};
-
-// Family Configuration
-const FAMILY_CONFIG = {
-    myself: {
-        emoji: '👨',
-        title: 'Me',
-        fields: [
-            { label: 'Full Name', key: 'name' },
-            { label: 'Email', key: 'email' },
-            { label: 'Location', key: 'location' },
-            { label: 'Occupation', key: 'occupation' },
-            { label: 'Annual Income', key: 'income' },
-            { label: 'Bio', key: 'bio', full: true }
-        ]
-    },
-    son: {
-        emoji: '👦',
-        title: 'My Son',
-        fields: [
-            { label: 'Name', key: 'name' },
-            { label: 'Age', key: 'age' },
-            { label: 'School/Grade', key: 'school' },
-            { label: 'Hobby', key: 'hobby' },
-            { label: 'Notes', key: 'notes', full: true }
-        ]
-    },
-    dog: {
-        emoji: '🐕',
-        title: 'My Dog',
-        fields: [
-            { label: 'Name', key: 'name' },
-            { label: 'Breed', key: 'breed' },
-            { label: 'Age', key: 'age' },
-            { label: 'Microchip #', key: 'microchip' },
-            { label: 'Notes', key: 'notes', full: true }
-        ]
-    }
 };
 
 // Notification Types
@@ -157,22 +117,21 @@ const NOTIFICATION_TYPES = {
     INFO: 'info'
 };
 
-// Notification Messages
-const MESSAGES = {
-    // Success
-    accountSaved: '✅ Account saved successfully!',
-    accountDeleted: '✅ Account deleted successfully!',
-    familyUpdated: '✅ Family profile updated!',
-    timelineSaved: '✅ Timeline expenses saved successfully!',
+// UI Constants (Magic Numbers)
+const UI_CONSTANTS = {
+    BREAKPOINT_MOBILE: 480,
+    BREAKPOINT_TABLET: 768,
+    BREAKPOINT_DESKTOP: 1024,
+    RELOAD_DELAY: 1500,
+    MAX_PERCENTAGE: 100,
+    CHART_HEIGHT_MOBILE: 350,
+    CHART_HEIGHT_DESKTOP: 400
+};
 
-    // Error
-    fillRequired: '❌ Please fill all required fields',
-    invalidCosts: '❌ Monthly and Annual costs must be valid numbers',
-    accountNotFound: '❌ Account not found',
-    negativeExpenses: '❌ Expenses cannot be negative',
-    tableNotFound: '❌ Timeline table not found',
-    saveError: '⚠️ Saved locally, but may not persist',
-
-    // Warning
-    deleteConfirm: (name) => `Delete ${name}?`
+// Chart Defaults
+const CHART_CONFIG = {
+    borderRadius: 4,
+    borderWidth: 1,
+    responsive: true,
+    maintainAspectRatio: false
 };

@@ -8,8 +8,7 @@
         "displayName": "Dad",
         "fullName": "Abir",
         "dateOfBirth": "1990-09-26",
-        "job": "Software Consultant and Technical Support Specialist",
-        "income": "70000"
+        "job": "Software Consultant and Technical Support Specialist"
       },
       {
         "id": "card_1769082534972",
@@ -19,16 +18,6 @@
         "fullName": "Nuka",
         "dateOfBirth": "2023-03-01",
         "breed": "German Shepherd/Border Collie"
-      },
-      {
-        "id": "card_1769286864761",
-        "type": "child",
-        "emoji": "👶",
-        "displayName": "Child",
-        "fullName": "Khalil",
-        "dateOfBirth": "2021-01-16",
-        "school": "Kita",
-        "interests": "Car friends"
       }
     ]
   },
@@ -42,7 +31,8 @@
           "month": "January",
           "display": "2025 - January",
           "income": 1800,
-          "expenses": 2000
+          "expenses": 2000,
+          "isLocked": false
         },
         {
           "id": "2025-February",
@@ -50,7 +40,8 @@
           "month": "February",
           "display": "2025 - February",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-March",
@@ -58,7 +49,8 @@
           "month": "March",
           "display": "2025 - March",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-April",
@@ -66,7 +58,8 @@
           "month": "April",
           "display": "2025 - April",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-May",
@@ -74,7 +67,8 @@
           "month": "May",
           "display": "2025 - May",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-June",
@@ -82,7 +76,8 @@
           "month": "June",
           "display": "2025 - June",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-July",
@@ -90,7 +85,8 @@
           "month": "July",
           "display": "2025 - July",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-August",
@@ -98,7 +94,8 @@
           "month": "August",
           "display": "2025 - August",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-September",
@@ -106,7 +103,8 @@
           "month": "September",
           "display": "2025 - September",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-October",
@@ -114,7 +112,8 @@
           "month": "October",
           "display": "2025 - October",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-November",
@@ -122,7 +121,8 @@
           "month": "November",
           "display": "2025 - November",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2025-December",
@@ -130,7 +130,8 @@
           "month": "December",
           "display": "2025 - December",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-January",
@@ -138,7 +139,8 @@
           "month": "January",
           "display": "2026 - January",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-February",
@@ -146,7 +148,8 @@
           "month": "February",
           "display": "2026 - February",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-March",
@@ -154,7 +157,8 @@
           "month": "March",
           "display": "2026 - March",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-April",
@@ -162,7 +166,8 @@
           "month": "April",
           "display": "2026 - April",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-May",
@@ -170,7 +175,8 @@
           "month": "May",
           "display": "2026 - May",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-June",
@@ -178,7 +184,8 @@
           "month": "June",
           "display": "2026 - June",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-July",
@@ -186,7 +193,8 @@
           "month": "July",
           "display": "2026 - July",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-August",
@@ -194,7 +202,8 @@
           "month": "August",
           "display": "2026 - August",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-September",
@@ -202,7 +211,8 @@
           "month": "September",
           "display": "2026 - September",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-October",
@@ -210,7 +220,8 @@
           "month": "October",
           "display": "2026 - October",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-November",
@@ -218,7 +229,8 @@
           "month": "November",
           "display": "2026 - November",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2026-December",
@@ -226,7 +238,8 @@
           "month": "December",
           "display": "2026 - December",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2027-January",
@@ -234,7 +247,8 @@
           "month": "January",
           "display": "2027 - January",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2027-February",
@@ -242,7 +256,8 @@
           "month": "February",
           "display": "2027 - February",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2027-March",
@@ -250,79 +265,89 @@
           "month": "March",
           "display": "2027 - March",
           "income": 1800,
-          "expenses": 1500
+          "expenses": 1500,
+          "isLocked": false
         },
         {
           "id": "2027-April",
           "year": 2027,
           "month": "April",
           "display": "2027 - April",
-          "income": 600,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         },
         {
           "id": "2027-May",
           "year": 2027,
           "month": "May",
           "display": "2027 - May",
-          "income": 600,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         },
         {
           "id": "2027-June",
           "year": 2027,
           "month": "June",
           "display": "2027 - June",
-          "income": 600,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         },
         {
           "id": "2027-July",
           "year": 2027,
           "month": "July",
           "display": "2027 - July",
-          "income": 600,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         },
         {
           "id": "2027-August",
           "year": 2027,
           "month": "August",
           "display": "2027 - August",
-          "income": 600,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         },
         {
           "id": "2027-September",
           "year": 2027,
           "month": "September",
           "display": "2027 - September",
-          "income": 600,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         },
         {
           "id": "2027-October",
           "year": 2027,
           "month": "October",
           "display": "2027 - October",
-          "income": 600,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         },
         {
           "id": "2027-November",
           "year": 2027,
           "month": "November",
           "display": "2027 - November",
-          "income": 600,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         },
         {
           "id": "2027-December",
           "year": 2027,
           "month": "December",
           "display": "2027 - December",
-          "income": 0,
-          "expenses": 1500
+          "income": 1700,
+          "expenses": 1140,
+          "isLocked": false
         }
       ]
     }
@@ -330,58 +355,69 @@
   "accounts": [
     {
       "id": 1,
-      "name": "Google Gemini",
-      "category": "AI Tools",
-      "type": "CONS",
-      "monthlyPayment": 0,
+      "name": "Primary Salary",
+      "category": "Productivity & Work",
+      "type": "income",
+      "monthlyPayment": 3500,
       "annualPayment": 0,
       "hasReminder": "No",
       "status": "Active",
-      "priority": "Optional"
+      "priority": "Critical"
     },
     {
       "id": 2,
-      "name": "Rent",
-      "category": "Household & Home",
-      "type": "CONS",
-      "monthlyPayment": 1000,
-      "annualPayment": 0,
-      "hasReminder": "Yes",
-      "status": "Active",
-      "priority": "Important"
-    },
-    {
-      "id": 3,
-      "name": "ChatGPT",
+      "name": "Google Gemini",
       "category": "AI Tools",
-      "type": "CONS",
+      "type": "expense",
       "monthlyPayment": 0,
       "annualPayment": 0,
       "hasReminder": "No",
-      "status": "Planned",
+      "status": "Active",
       "priority": "Optional"
     },
     {
+      "id": 3,
+      "name": "Rent",
+      "category": "Household & Home",
+      "type": "expense",
+      "monthlyPayment": 1200,
+      "annualPayment": 0,
+      "hasReminder": "Yes",
+      "status": "Active",
+      "priority": "Critical"
+    },
+    {
       "id": 4,
+      "name": "ChatGPT",
+      "category": "AI Tools",
+      "type": "expense",
+      "monthlyPayment": 20,
+      "annualPayment": 0,
+      "hasReminder": "No",
+      "status": "Active",
+      "priority": "Optional"
+    },
+    {
+      "id": 5,
       "name": "Naturstrom",
       "category": "Utilities & Bills",
-      "type": "CONS",
-      "monthlyPayment": 40,
+      "type": "expense",
+      "monthlyPayment": 45,
       "annualPayment": 0,
       "hasReminder": "Yes",
       "status": "Active",
       "priority": "Important"
     },
     {
-      "id": 5,
+      "id": 6,
       "name": "Groceries",
-      "category": "Shopping & E-Commerce",
-      "type": "CONS",
-      "monthlyPayment": 100,
+      "category": "Food & Dining",
+      "type": "expense",
+      "monthlyPayment": 400,
       "annualPayment": 0,
       "hasReminder": "Yes",
       "status": "Active",
-      "priority": "Important"
+      "priority": "Critical"
     }
   ],
   "settings": {
@@ -389,6 +425,38 @@
     "primaryColor": "#6366f1",
     "currency": "€",
     "heartbeatTimeout": 10,
-    "autoShutdown": true
-  }
+    "autoShutdown": true,
+    "categories": [
+      "Productivity & Work",
+      "Household & Home",
+      "Utility Services",
+      "Health & Wellness",
+      "Automotive & Transport",
+      "Financial & Insurance",
+      "Family & Kids",
+      "Education & Learning",
+      "Entertainment & Streaming",
+      "News & Reading",
+      "Food & Dining",
+      "Tech & Software",
+      "Shopping & E-Commerce",
+      "Social & Communication",
+      "Travel & Lifestyle",
+      "Donations & Charity",
+      "Other"
+    ],
+    "statuses": [
+      "Active",
+      "Planned",
+      "Dormant",
+      "Cancelled"
+    ],
+    "criticalities": [
+      "Critical",
+      "Essential",
+      "Important",
+      "Optional"
+    ]
+  },
+  "goals": []
 }

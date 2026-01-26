@@ -15,17 +15,11 @@ let appSettings = { ...DEFAULT_SETTINGS };
 // Cards Data - flexible card system
 let cards = [];
 
-// Accounts Data - 5 accounts
-let accounts = [
-    [1, "Google Gemini", "AI Tools", "expense", 0, 0, "No", "Active", "Optional"],
-    [2, "Rent", "Household & Home", "expense", 1000, 0, "Yes", "Active", "Important"],
-    [3, "ChatGPT", "AI Tools", "expense", 0, 0, "No", "Planned", "Essential"],
-    [4, "Naturstrom", "Utilities & Bills", "expense", 40, 0, "Yes", "Active", "Important"],
-    [5, "Groceries", "Shopping & E-Commerce", "expense", 100, 0, "Yes", "Active", "Important"]
-];
+// Accounts Data - loaded from database or seed on first run
+let accounts = [];
 
-// Convert accounts array to object format
-accounts = convertAccountsToObjects(accounts);
+// Financial Goals
+let goals = [];
 
 // ==================== INDEXEDDB MANAGEMENT ====================
 
@@ -33,17 +27,20 @@ accounts = convertAccountsToObjects(accounts);
 
 const API_URL = `${window.location.origin}/api/data`;
 
+/**
+ * Initializes the storage system and starts the application heartbeat.
+ * Checks server availability before resolving.
+ * @returns {Promise<void>}
+ */
 function initIndexedDB() {
     // Start heartbeat immediately
     startHeartbeat();
 
     // We check if server is reachable and load initial data
     return new Promise((resolve, reject) => {
-        fetch(API_URL)
+        fetch(API_URL, { cache: 'no-store' })
             .then(response => {
                 if (!response.ok) throw new Error('Server not reachable');
-                // Ensure the accounts array is populated from the server if empty logic is needed
-                // But typically loadFromIndexedDB handles the actual data loading into variables.
                 resolve();
             })
             .catch(err => {
@@ -54,6 +51,13 @@ function initIndexedDB() {
     });
 }
 
+/**
+ * Saves data to the local server storage (acting as a database).
+ * @param {string} storeName - The name of the data store (e.g., 'accounts', 'profile').
+ * @param {any} data - The data payload to save.
+ * @param {string|null} key - Optional key for store-based saving.
+ * @returns {Promise<void>}
+ */
 function saveToIndexedDB(storeName, data, key = null) {
     return new Promise((resolve, reject) => {
         fetch(API_URL, {
@@ -72,6 +76,10 @@ function saveToIndexedDB(storeName, data, key = null) {
     });
 }
 
+/**
+ * Starts a periodic heartbeat to notify the server that the application is active.
+ * Prevents auto-shutdown while the tab is open.
+ */
 function startHeartbeat() {
     // Ping every 5 seconds
     setInterval(() => {
@@ -84,8 +92,11 @@ function startHeartbeat() {
 
 function loadFromIndexedDB(storeName, key = null) {
     return new Promise((resolve, reject) => {
-        fetch(API_URL)
-            .then(response => response.json())
+        fetch(API_URL, { cache: 'no-store' })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                return response.json();
+            })
             .then(fullData => {
                 const storeData = fullData[storeName];
 
@@ -176,7 +187,7 @@ async function importData(event) {
             // Reload page to show new data
             setTimeout(() => {
                 window.location.reload();
-            }, 1500);
+            }, UI_CONSTANTS.RELOAD_DELAY);
 
         } catch (err) {
             console.error('Import Error:', err);
@@ -189,6 +200,29 @@ async function importData(event) {
 
 // ==================== UTILITY FUNCTIONS ====================
 
+/**
+ * Calculates current monthly income and expense totals from active accounts.
+ * Includes profile-level income distribution as requested.
+ * @returns {Object} An object containing {totalIncome, totalExpense}.
+ */
+function calculateBaseMonthlyValues() {
+    const accountMonthlyIncome = accounts.filter(acc => acc.type === 'income' && acc.status === 'Active')
+        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
+    
+    // Profile-level income is now removed from global totals per user request
+    const totalIncome = accountMonthlyIncome;
+
+    const totalExpense = accounts.filter(acc => (acc.type === 'expense' || !acc.type) && acc.status === 'Active')
+        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
+    
+    return { totalIncome, totalExpense };
+}
+
+/**
+ * Converts raw array-based account data into keyed objects for application use.
+ * @param {Array[]} accountsArray - Array of account data arrays.
+ * @returns {Object[]} Array of account objects.
+ */
 function convertAccountsToObjects(accountsArray) {
     return accountsArray.map(([id, name, category, type, monthlyPayment, annualPayment, hasReminder, status, priority]) => ({
         id,
@@ -201,6 +235,74 @@ function convertAccountsToObjects(accountsArray) {
         status,
         priority
     }));
+}
+
+// ==================== SECURITY UTILITIES ====================
+
+/**
+ * Sanitize user input to prevent XSS attacks
+ * Removes HTML tags and limits length
+ */
+function sanitizeInput(value, maxLength = 200) {
+    if (!value) return '';
+    
+    // Convert to string and trim
+    const str = String(value).trim();
+    
+    // Remove HTML tags
+    const withoutTags = str.replace(/<[^>]*>/g, '');
+    
+    // Limit length
+    const limited = withoutTags.slice(0, maxLength);
+    
+    return limited;
+}
+
+/**
+ * Escape HTML special characters
+ * Use this when you must preserve some formatting but need to escape HTML
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    
+    return String(text).replace(/[&<>"']/g, char => map[char]);
+}
+
+/**
+ * Validate and sanitize numeric input
+ */
+function sanitizeNumber(value, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = parseFloat(value);
+    if (isNaN(num)) return 0;
+    return Math.max(min, Math.min(max, num));
+}
+
+/**
+ * Validate email format (basic)
+ */
+function isValidEmail(email) {
+    if (!email) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+/**
+ * Create safe DOM element with text content
+ * Prevents XSS by using textContent instead of innerHTML
+ */
+function createSafeElement(tag, text, className = '') {
+    const element = document.createElement(tag);
+    if (text) element.textContent = text;
+    if (className) element.className = className;
+    return element;
 }
 
 function validateInput(value, type = 'string', required = false) {
@@ -283,16 +385,71 @@ const accountForm = document.getElementById('accountForm');
 const modalTitle = document.getElementById('modalTitle');
 const formService = document.getElementById('formService');
 const formCategory = document.getElementById('formCategory');
-const formType = document.getElementById('formType');
-const formMonthlyCost = document.getElementById('formMonthlyCost');
-const formAnnualCost = document.getElementById('formAnnualCost');
-const formPaid = document.getElementById('formPaid');
-const formStatus = document.getElementById('formStatus');
-const formCriticality = document.getElementById('formCriticality');
-const categoryFilter = document.getElementById('categoryFilter');
-const saveTimelineBtn = document.getElementById('saveTimelineBtn');
-
+const filterCategory = document.getElementById('filterCategory');
+const filterType = document.getElementById('filterType');
+const filterStatus = document.getElementById('filterStatus');
+const filterCriticality = document.getElementById('filterCriticality');
+const filterOwner = document.getElementById('filterOwner');
 // ==================== NAVIGATION & TAB SWITCHING ====================
+
+const sidebar = document.querySelector('.sidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+function openSidebar() {
+    if (sidebar) sidebar.classList.add('open');
+    if (sidebarOverlay) sidebarOverlay.classList.add('active');
+}
+
+function closeSidebar() {
+    if (sidebar) sidebar.classList.remove('open');
+    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+}
+
+function toggleSidebar() {
+    if (sidebar && sidebar.classList.contains('open')) {
+        closeSidebar();
+    } else {
+        openSidebar();
+    }
+}
+
+// ==================== SMART FEATURES (NAVIGATION & FILTERING) ====================
+
+/**
+ * Resets all dashboard filters to their default (All) state.
+ * Triggers a table re-render to show all accounts.
+ */
+function clearAllFilters() {
+    if (filterCategory) filterCategory.value = '';
+    if (filterType) filterType.value = '';
+    if (filterStatus) filterStatus.value = '';
+    if (filterCriticality) filterCriticality.value = '';
+    if (filterOwner) filterOwner.value = '';
+    
+    filterAccounts();
+    notify('🧹 All filters cleared', NOTIFICATION_TYPES.INFO);
+}
+
+/**
+ * Scrolls the timeline table to the current month/year row.
+ */
+function jumpToToday() {
+    const now = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+    const currentId = `${now.getFullYear()}-${monthNames[now.getMonth()]}`;
+    
+    const targetRow = document.getElementById(currentId);
+    if (targetRow) {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetRow.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+        setTimeout(() => {
+            targetRow.style.backgroundColor = '';
+        }, 2000);
+    } else {
+        notify('📍 Current month not found in timeline', NOTIFICATION_TYPES.WARNING);
+    }
+}
 
 navButtons.forEach(btn => {
     btn.addEventListener('click', function () {
@@ -313,6 +470,11 @@ function switchTab(tabName) {
 
     if (activeBtn) activeBtn.classList.add('active');
     if (activeTab) activeTab.classList.add('active');
+
+    // Close sidebar on mobile
+    if (window.innerWidth <= UI_CONSTANTS.BREAKPOINT_DESKTOP) {
+        closeSidebar();
+    }
 
     // Update page title
     if (pageTitle) pageTitle.textContent = TAB_TITLES[tabName] || tabName;
@@ -338,8 +500,7 @@ const CARD_TEMPLATES = {
         label: 'Adult',
         icon: '👨‍💼',
         fields: [
-            { id: 'job', label: 'Occupation', type: 'text', placeholder: 'e.g. Software Engineer' },
-            { id: 'income', label: 'Annual Income', type: 'number', placeholder: 'e.g. 50000' }
+            { id: 'job', label: 'Occupation', type: 'text', placeholder: 'e.g. Software Engineer' }
         ]
     },
     child: {
@@ -371,6 +532,10 @@ const EMOJI_OPTIONS = [
 let selectedTemplate = 'adult';
 let selectedEmoji = '👨';
 
+/**
+ * Renders all profile cards from the current state into the grid.
+ * Updates the empty state if no cards exist.
+ */
 function renderCards() {
     const cardsGrid = document.getElementById('cardsGrid');
     if (!cardsGrid) return;
@@ -397,10 +562,6 @@ function renderCards() {
                     <label>Occupation</label>
                     <div class="value">${card.job || '—'}</div>
                 </div>
-                <div class="family-field">
-                    <label>Income</label>
-                    <div class="value">${card.income ? TIMELINE_CONFIG.currency + parseInt(card.income).toLocaleString() : '—'}</div>
-                </div>
             `;
         } else if (cardType === 'child') {
             fieldsHTML += `
@@ -426,16 +587,38 @@ function renderCards() {
             `;
         }
 
-        // Calculate assigned expenses
-        const assignExpenses = accounts.filter(a => a.ownerId === card.id && a.status === 'Active')
-            .reduce((sum, a) => sum + (parseFloat(a.monthlyPayment) || 0), 0);
+        // Calculate assigned accounts metrics
+        const assignedAccounts = accounts.filter(a => a.ownerId === card.id && a.status === 'Active');
         
-        if (assignExpenses > 0) {
+        const cardMonthlySpend = assignedAccounts
+            .filter(a => a.type === 'expense' || !a.type)
+            .reduce((sum, a) => sum + (parseFloat(a.monthlyPayment) || 0), 0);
+            
+        const cardAccountIncome = assignedAccounts
+            .filter(a => a.type === 'income')
+            .reduce((sum, a) => sum + (parseFloat(a.monthlyPayment) || 0), 0);
+
+        // Total Monthly Income only includes assigned income accounts
+        const totalCardIncome = cardAccountIncome;
+        
+        // Add Income field if present
+        if (totalCardIncome > 0) {
+            fieldsHTML += `
+                <div class="family-field" style="border-left: 3px solid #10b981; background: #f0fdf4;">
+                    <label>Monthly Income</label>
+                    <div class="value" style="color: #16a34a; font-weight: 800;">
+                        ${TIMELINE_CONFIG.currency}${totalCardIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (cardMonthlySpend > 0) {
            fieldsHTML += `
                 <div class="family-field" style="border-left: 3px solid #f87171; background: #fef2f2;">
                     <label>Monthly Spend</label>
                     <div class="value" style="color: #dc2626; font-weight: 800;">
-                        ${TIMELINE_CONFIG.currency}${assignExpenses.toLocaleString()}
+                        ${TIMELINE_CONFIG.currency}${cardMonthlySpend.toLocaleString(undefined, {minimumFractionDigits: 2})}
                     </div>
                 </div>
             `;
@@ -628,21 +811,42 @@ function editCard(cardId) {
     }, 0);
 }
 
+/**
+ * Sanitizes input and saves a new or existing profile card.
+ * Updates the cards state and persists to storage.
+ */
 function saveCard() {
-    const displayName = document.getElementById('cardDisplayName')?.value.trim();
-    const fullName = document.getElementById('cardFullName')?.value.trim();
+    const displayNameRaw = document.getElementById('cardDisplayName')?.value.trim();
+    const fullNameRaw = document.getElementById('cardFullName')?.value.trim();
     const dateOfBirth = document.getElementById('cardDateOfBirth')?.value;
+
+    // Sanitize inputs
+    const displayName = sanitizeInput(displayNameRaw, 50);
+    const fullName = sanitizeInput(fullNameRaw, 100);
 
     if (!displayName || !fullName) {
         notify('❌ Display Name and Full Name are required', NOTIFICATION_TYPES.ERROR);
         return;
     }
 
-    // Collect specific fields
+    // Validate lengths
+    if (displayName.length < 1 || fullName.length < 1) {
+        notify('❌ Names must not be empty after sanitization', NOTIFICATION_TYPES.ERROR);
+        return;
+    }
+
+    // Collect specific fields with sanitization
     const templateFields = {};
     CARD_TEMPLATES[selectedTemplate].fields.forEach(field => {
         const val = document.getElementById(`card_${field.id}`)?.value;
-        if(val) templateFields[field.id] = val;
+        if (val) {
+            // Sanitize based on field type
+            if (field.type === 'number') {
+                templateFields[field.id] = sanitizeNumber(val, 0, 10000000);
+            } else {
+                templateFields[field.id] = sanitizeInput(val, 200);
+            }
+        }
     });
 
     const newCardData = {
@@ -677,6 +881,11 @@ function saveCard() {
         });
 }
 
+/**
+ * Deletes a profile card after user confirmation.
+ * Also cleans up any owner references in accounts.
+ * @param {string} cardId - The ID of the card to delete.
+ */
 function deleteCard(cardId) {
     const card = cards.find(c => c.id === cardId);
     if (!card) return;
@@ -708,7 +917,7 @@ function deleteCard(cardId) {
                 // If we added owner column to table, this would be crucial.
                 renderAccounts(); 
                 updateStats(); // Refresh stats
-                notify(`✅ Profile deleted! Assigned expenses are now unassigned.`, NOTIFICATION_TYPES.SUCCESS);
+                notify(`✅ Profile deleted! Assigned accounts are now unassigned.`, NOTIFICATION_TYPES.SUCCESS);
             })
             .catch(err => {
                 notify(MESSAGES.saveError, NOTIFICATION_TYPES.WARNING);
@@ -766,14 +975,12 @@ function createAccountRow(row) {
     return tr;
 }
 
+/**
+ * Renders the accounts table based on the current filtering and sorting state.
+ * Uses current filter values to determine what to show.
+ */
 function renderAccounts() {
-    const tbody = document.getElementById('accountsBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '';
-    accounts.forEach((row) => {
-        tbody.appendChild(createAccountRow(row));
-    });
+    filterAccounts();
 }
 
 function toggleAddForm() {
@@ -796,6 +1003,11 @@ function toggleAddForm() {
     populateAccountFormDropdowns();
 
     // Manually reset form fields since accountForm is a div, not a form element
+    const formPreset = document.getElementById('formPreset');
+    if (formPreset) {
+        populateTemplateDropdown();
+        formPreset.value = '';
+    }
     formService.value = '';
     formCategory.value = '';
     if (formType) formType.value = 'expense';
@@ -850,24 +1062,35 @@ function editAccount(id) {
     accountModal.classList.add('active');
 }
 
+/**
+ * Sanitizes input and saves a new or existing account (income/expense).
+ * Enforces numeric bounds and updates storage.
+ */
 function saveAccount() {
-    const service = formService?.value.trim();
+    const serviceRaw = formService?.value.trim();
     const category = formCategory?.value;
     const type = formType?.value || 'expense';
-    const monthlyCost = parseFloat(formMonthlyCost?.value) || 0;
-    const annualCost = parseFloat(formAnnualCost?.value) || 0;
+    const monthlyCostRaw = formMonthlyCost?.value;
+    const annualCostRaw = formAnnualCost?.value;
     const paid = formPaid?.value;
     const status = formStatus?.value;
     const criticality = formCriticality?.value;
     const ownerId = document.getElementById('formOwner')?.value || null;
 
-    if (!validateInput(service, 'string', true) || !category || !paid || !status || !criticality) {
+    // Sanitize service name
+    const service = sanitizeInput(serviceRaw, 100);
+    
+    // Sanitize and validate numeric inputs
+    const monthlyCost = sanitizeNumber(monthlyCostRaw, 0, 1000000);
+    const annualCost = sanitizeNumber(annualCostRaw, 0, 10000000);
+
+    if (!service || !category || !paid || !status || !criticality) {
         notify(MESSAGES.fillRequired, NOTIFICATION_TYPES.ERROR);
         return;
     }
 
-    if (!validateInput(monthlyCost, 'number') || !validateInput(annualCost, 'number')) {
-        notify(MESSAGES.invalidCosts, NOTIFICATION_TYPES.ERROR);
+    if (service.length < 1) {
+        notify('❌ Service name must not be empty after sanitization', NOTIFICATION_TYPES.ERROR);
         return;
     }
 
@@ -917,7 +1140,7 @@ function saveAccount() {
 
             updateStats();
             initCharts();
-            notify(MESSAGES.accountSaved, NOTIFICATION_TYPES.SUCCESS);
+            notify('✅ Account saved!', NOTIFICATION_TYPES.SUCCESS);
         })
         .catch(err => {
             console.error('Save error:', err);
@@ -956,20 +1179,53 @@ function closeAccountModal() {
     editingAccountId = null;
 }
 
+/**
+ * Filters the accounts list based on category, type, status, and owner.
+ * Updates the UI with only matching entries.
+ */
 function filterAccounts() {
-    const category = categoryFilter.value;
-    if (!category) {
-        renderAccounts();
+    const catVal = filterCategory ? filterCategory.value : '';
+    const typeVal = filterType ? filterType.value : '';
+    const statusVal = filterStatus ? filterStatus.value : '';
+    const critVal = filterCriticality ? filterCriticality.value : '';
+    const ownerVal = filterOwner ? filterOwner.value : '';
+
+    const filtered = accounts.filter(acc => {
+        const matchCat = catVal === '' || acc.category === catVal;
+        const matchType = typeVal === '' || (acc.type || 'expense') === typeVal;
+        const matchStatus = statusVal === '' || acc.status === statusVal;
+        const matchCrit = critVal === '' || acc.priority === critVal;
+        const matchOwner = ownerVal === '' || (acc.ownerId === ownerVal || (ownerVal === 'unassigned' && !acc.ownerId));
+        return matchCat && matchType && matchStatus && matchCrit && matchOwner;
+    });
+
+    if (!accountsBody) return;
+
+    if (filtered.length === 0) {
+        accountsBody.innerHTML = `
+            <tr>
+                <td colspan="10">
+                    <div class="empty-state-row">
+                        <div class="empty-state-content">
+                            <div class="empty-state-icon">🔎</div>
+                            <div class="empty-state-text">No accounts found matching your filters</div>
+                            <button class="btn-secondary btn-tiny" onclick="clearAllFilters()">Reset All Filters</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
         return;
     }
 
-    const filtered = accounts.filter(acc => acc.category === category);
-    if (!accountsBody) return;
-
-    accountsBody.innerHTML = '';
+    // Use DocumentFragment for better performance
+    const fragment = document.createDocumentFragment();
     filtered.forEach((row) => {
-        accountsBody.appendChild(createAccountRow(row));
+        fragment.appendChild(createAccountRow(row));
     });
+    
+    accountsBody.innerHTML = '';
+    accountsBody.appendChild(fragment);
 }
 
 // ==================== SORTING ====================
@@ -1025,22 +1281,17 @@ function sortTable(column) {
 
 // ==================== STATS UPDATE ====================
 
+/**
+ * Calculates high-level dashboard statistics (total income, expenses, net flow).
+ * Directly updates the stats grid in the DOM.
+ */
 function updateStats() {
+    // 1. Inventory Count (All accounts)
     const totalAccounts = accounts.length;
     
-    // Calculate income from accounts (e.g. side hustles)
-    const accountMonthlyIncome = accounts.filter(acc => acc.type === 'income' && acc.status === 'Active')
-        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
-    
-    // Calculate monthly income from ALL profiles
-    const profileMonthlyIncome = cards.reduce((sum, card) => sum + (parseFloat(card.income) || 0), 0) / 12;
-    
-    const totalMonthlyIncome = accountMonthlyIncome + profileMonthlyIncome;
-    
-    const totalMonthlyExpense = accounts.filter(acc => (acc.type === 'expense' || !acc.type) && acc.status === 'Active')
-        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
-    
-    const netFlow = totalMonthlyIncome - totalMonthlyExpense;
+    // 2. Financial Totals (Use central engine for consistency)
+    const { totalIncome, totalExpense } = calculateBaseMonthlyValues();
+    const netFlow = totalIncome - totalExpense;
 
     const totalAccountsEl = document.getElementById('totalAccounts');
     const incomeEl = document.getElementById('statMonthlyIncome');
@@ -1048,8 +1299,8 @@ function updateStats() {
     const netFlowEl = document.getElementById('statNetFlow');
 
     if (totalAccountsEl) totalAccountsEl.textContent = totalAccounts;
-    if (incomeEl) incomeEl.textContent = `${TIMELINE_CONFIG.currency}${totalMonthlyIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-    if (expenseEl) expenseEl.textContent = `${TIMELINE_CONFIG.currency}${totalMonthlyExpense.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    if (incomeEl) incomeEl.textContent = `${TIMELINE_CONFIG.currency}${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    if (expenseEl) expenseEl.textContent = `${TIMELINE_CONFIG.currency}${totalExpense.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
     
     if (netFlowEl) {
         netFlowEl.textContent = `${TIMELINE_CONFIG.currency}${netFlow.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
@@ -1066,7 +1317,45 @@ let criticalityChartInstance = null;
 let statusChartInstance = null;
 let cashFlowChartInstance = null;
 
+/**
+ * Destroy all chart instances to prevent memory leaks
+ * Call this before re-initializing charts
+ */
+function destroyAllCharts() {
+    const charts = [
+        categoryChartInstance,
+        costChartInstance,
+        criticalityChartInstance,
+        statusChartInstance,
+        cashFlowChartInstance
+    ];
+    
+    charts.forEach(chart => {
+        if (chart) {
+            try {
+                chart.destroy();
+            } catch (err) {
+                console.warn('Error destroying chart:', err);
+            }
+        }
+    });
+    
+    // Reset all instances to null
+    categoryChartInstance = null;
+    costChartInstance = null;
+    criticalityChartInstance = null;
+    statusChartInstance = null;
+    cashFlowChartInstance = null;
+}
+
+/**
+ * Initializes and renders all dashboard charts using Chart.js.
+ * Performs data aggregation and cleans up existing instances.
+ */
 function initCharts() {
+    // Destroy existing charts first
+    destroyAllCharts();
+    
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
         console.warn('Chart.js not loaded. Charts will not be displayed.');
@@ -1096,22 +1385,26 @@ function initCharts() {
     accounts.forEach(acc => {
         const { category, monthlyPayment, status, priority, type } = acc;
         const isIncome = type === 'income';
+        const isActive = status === 'Active';
         
+        // 1. Category Count (All accounts - Inventory mode)
         categoryCounts[category] = (categoryCounts[category] || 0) + 1;
         
-        if (isIncome) {
-            chartAccountIncome += (parseFloat(monthlyPayment) || 0);
-        } else {
-            chartAccountExpense += (parseFloat(monthlyPayment) || 0);
-            categoryExpenseCosts[category] = (categoryExpenseCosts[category] || 0) + (parseFloat(monthlyPayment) || 0);
+        // 2. Financial Totals (Active items only - Reality mode)
+        if (isActive) {
+            if (isIncome) {
+                chartAccountIncome += (parseFloat(monthlyPayment) || 0);
+            } else {
+                chartAccountExpense += (parseFloat(monthlyPayment) || 0);
+                categoryExpenseCosts[category] = (categoryExpenseCosts[category] || 0) + (parseFloat(monthlyPayment) || 0);
+            }
         }
 
         if (criticalityCounts.hasOwnProperty(priority)) criticalityCounts[priority]++;
         if (statusCounts.hasOwnProperty(status)) statusCounts[status]++;
     });
 
-    const profileIncome = cards.reduce((sum, c) => sum + (parseFloat(c.income) || 0), 0) / 12;
-    const totalIncome = chartAccountIncome + profileIncome;
+    const totalIncome = chartAccountIncome;
 
     // 1. Accounts by Category (Horizontal Bar - Sorted)
     const sortedCategories = Object.entries(categoryCounts)
@@ -1139,6 +1432,28 @@ function initCharts() {
                 scales: {
                     x: { beginAtZero: true, grid: { display: false } },
                     y: { grid: { display: false } }
+                },
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const category = sortedCategories[index][0];
+                        
+                        // Switch to accounts tab
+                        switchTab('accounts');
+                        
+                        // Reset other filters to avoid "Double Filtering"
+                        if (filterType) filterType.value = '';
+                        if (filterStatus) filterStatus.value = '';
+                        if (filterCriticality) filterCriticality.value = '';
+                        if (filterOwner) filterOwner.value = '';
+
+                        // Apply filter
+                        if (filterCategory) {
+                            filterCategory.value = category;
+                            filterAccounts();
+                            notify(`🔍 Showing accounts for: ${category}`, NOTIFICATION_TYPES.INFO);
+                        }
+                    }
                 }
             }
         });
@@ -1170,6 +1485,28 @@ function initCharts() {
                 scales: {
                     x: { beginAtZero: true },
                     y: { grid: { display: false } }
+                },
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const category = sortedCosts[index][0];
+                        
+                        // Switch to accounts tab
+                        switchTab('accounts');
+                        
+                        // Reset other filters
+                        if (filterType) filterType.value = '';
+                        if (filterStatus) filterStatus.value = '';
+                        if (filterCriticality) filterCriticality.value = '';
+                        if (filterOwner) filterOwner.value = '';
+
+                        // Apply filter
+                        if (filterCategory) {
+                            filterCategory.value = category;
+                            filterAccounts();
+                            notify(`🔍 Showing expenses for: ${category}`, NOTIFICATION_TYPES.INFO);
+                        }
+                    }
                 }
             }
         });
@@ -1244,7 +1581,29 @@ function initCharts() {
                         }
                     }
                 },
-                scales: { y: { beginAtZero: true } }
+                scales: { y: { beginAtZero: true } },
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const criticality = criticalityChartInstance.data.labels[index];
+                        
+                        // Switch to accounts tab
+                        switchTab('accounts');
+
+                        // Reset other filters
+                        if (filterCategory) filterCategory.value = '';
+                        if (filterType) filterType.value = '';
+                        if (filterStatus) filterStatus.value = '';
+                        if (filterOwner) filterOwner.value = '';
+                        
+                        // Apply specific filter
+                        if (filterCriticality) {
+                            filterCriticality.value = criticality;
+                            filterAccounts();
+                            notify(`🔍 Showing accounts with criticality: ${criticality}`, NOTIFICATION_TYPES.INFO);
+                        }
+                    }
+                }
             }
         });
     }
@@ -1286,7 +1645,29 @@ function initCharts() {
                         }
                     }
                 },
-                scales: { y: { beginAtZero: true } }
+                scales: { y: { beginAtZero: true } },
+                onClick: (e, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const status = statusChartInstance.data.labels[index];
+                        
+                        // Switch to accounts tab
+                        switchTab('accounts');
+
+                        // Reset other filters
+                        if (filterCategory) filterCategory.value = '';
+                        if (filterType) filterType.value = '';
+                        if (filterCriticality) filterCriticality.value = '';
+                        if (filterOwner) filterOwner.value = '';
+
+                        // Apply specific filter
+                        if (filterStatus) {
+                            filterStatus.value = status;
+                            filterAccounts();
+                            notify(`🔍 Showing accounts with status: ${status}`, NOTIFICATION_TYPES.INFO);
+                        }
+                    }
+                }
             }
         });
     }
@@ -1300,18 +1681,6 @@ let currentStartingBalance = TIMELINE_CONFIG.defaultStartingBalance;
 function getTimelineYears() {
     const currentYear = new Date().getFullYear();
     return [currentYear - 1, currentYear, currentYear + 1];
-}
-
-function calculateBaseMonthlyValues() {
-    const accountMonthlyIncome = accounts.filter(acc => acc.type === 'income' && acc.status === 'Active')
-        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
-    const profileMonthlyIncome = cards.reduce((sum, card) => sum + (parseFloat(card.income) || 0), 0) / 12;
-    const totalIncome = accountMonthlyIncome + profileMonthlyIncome;
-
-    const totalExpense = accounts.filter(acc => (acc.type === 'expense' || !acc.type) && acc.status === 'Active')
-        .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
-    
-    return { totalIncome, totalExpense };
 }
 
 function generateMonthData(years) {
@@ -1330,65 +1699,58 @@ function generateMonthData(years) {
                 month: month,
                 display: `${year} - ${month}`,
                 income: parseFloat(totalIncome.toFixed(2)),
-                expenses: parseFloat(totalExpense.toFixed(2))
+                expenses: parseFloat(totalExpense.toFixed(2)),
+                isLocked: false
             });
         });
     });
     return allMonths;
 }
 
+/**
+ * Initializes the financial timeline using in-memory data and saved overrides.
+ * Updates the 3-year projection grid without re-fetching from server.
+ */
 function initializeTimelineData() {
     const years = getTimelineYears();
     let timelineData = generateMonthData(years);
 
-    // Update title
+    // Update titles
     const titleEl = document.getElementById('timelineTitle');
     if (titleEl) titleEl.textContent = `${years[0]} - ${years[2]} Financial Timeline`;
 
-    // Update chart title
     const chartTitleEl = document.getElementById('chartTitle');
     if (chartTitleEl) chartTitleEl.textContent = `${years[0]} - ${years[2]} Balance Projection`;
 
-    loadFromIndexedDB(DB_CONFIG.stores.timeline, 'timelineData')
-        .then(savedData => {
-            if (savedData) {
-                // Restore starting balance
-                if (savedData.startingBalance !== undefined) {
-                    currentStartingBalance = savedData.startingBalance;
+    // Use global timeline overrides if they exist
+    if (window.timelineOverrides) {
+        // Merge saved months into generated structure
+        if (window.timelineOverrides.months && Array.isArray(window.timelineOverrides.months)) {
+            timelineData = timelineData.map(item => {
+                const savedItem = window.timelineOverrides.months.find(m => m.id === item.id);
+                if (savedItem) {
+                    return {
+                        ...item,
+                        income: savedItem.income,
+                        expenses: savedItem.expenses,
+                        isLocked: savedItem.isLocked || false
+                    };
                 }
+                return item;
+            });
+        }
+        
+        if (window.timelineOverrides.startingBalance !== undefined) {
+            currentStartingBalance = window.timelineOverrides.startingBalance;
+        }
+    }
 
-                // Merge saved months into generated structure (preserves structure if years change)
-                if (savedData.months && Array.isArray(savedData.months)) {
-                    timelineData = timelineData.map(item => {
-                        const savedItem = savedData.months.find(m => m.id === item.id);
-                        if (savedItem) {
-                            return {
-                                ...item,
-                                income: savedItem.income,
-                                expenses: savedItem.expenses
-                            };
-                        }
-                        return item;
-                    });
-                }
-            }
+    // Set input value
+    const balanceInput = document.getElementById('startingBalanceInput');
+    if (balanceInput) balanceInput.value = currentStartingBalance;
 
-            // Set input value
-            const balanceInput = document.getElementById('startingBalanceInput');
-            if (balanceInput) balanceInput.value = currentStartingBalance;
-
-            renderTimelineTable(timelineData);
-            renderBalanceChart(timelineData);
-        })
-        .catch(err => {
-            console.error('Error loading timeline:', err);
-            // Set default input value
-            const balanceInput = document.getElementById('startingBalanceInput');
-            if (balanceInput) balanceInput.value = currentStartingBalance;
-
-            renderTimelineTable(timelineData);
-            renderBalanceChart(timelineData);
-        });
+    renderTimelineTable(timelineData);
+    renderBalanceChart(timelineData);
 }
 
 function calculateBalances(timelineData) {
@@ -1409,31 +1771,73 @@ function renderTimelineTable(timelineData) {
 
     withBalances.forEach((item, index) => {
         const row = document.createElement('tr');
-        const balanceClass = item.balance >= 0 ? 'balance-positive' : 'balance-negative';
+        // Unique ID for navigation (e.g. 2025-January)
+        row.id = `${item.year}-${item.month}`;
+        
+        const isNegative = item.balance < 0;
+        const balanceClass = isNegative ? 'timeline-balance negative-balance' : 'timeline-balance balance-positive';
 
         // Add divider for new years
         if (item.month === 'January' && index > 0) {
             const separatorRow = document.createElement('tr');
-            separatorRow.innerHTML = `<td colspan="4" style="background-color: #e2e8f0; font-weight: bold; padding: 5px 15px;">${item.year}</td>`;
+            separatorRow.innerHTML = `<td colspan="5" style="background-color: #f8fafc; font-weight: 800; padding: 10px 15px; border-top: 2px solid #e2e8f0; color: #475569;">🗓️ ${item.year}</td>`;
             tbody.appendChild(separatorRow);
         }
 
+        row.className = item.isLocked ? 'locked-row' : '';
         row.innerHTML = `
-            <td>${item.display}</td>
+            <td>
+                <button class="lock-btn ${item.isLocked ? 'locked' : ''}" 
+                    onclick="toggleMonthLock(${index})" 
+                    title="${item.isLocked ? 'Unlock month' : 'Lock month'}">
+                    ${item.isLocked ? '🔒' : '🔓'}
+                </button>
+            </td>
+            <td class="font-bold">${item.display}</td>
             <td>
                 <input type="number" data-index="${index}" data-field="income" 
                     value="${item.income}" min="0" step="100" class="timeline-input" 
-                    style="width: 100px; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px;">
+                    ${item.isLocked ? 'readonly' : ''}>
             </td>
             <td>
                 <input type="number" data-index="${index}" data-field="expenses" 
                     value="${item.expenses}" min="0" step="10" class="timeline-input"
-                    style="width: 100px; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px;">
+                    ${item.isLocked ? 'readonly' : ''}>
             </td>
-            <td class="${balanceClass}">${TIMELINE_CONFIG.currency}${item.balance.toFixed(2)}</td>
+            <td class="${balanceClass}">${TIMELINE_CONFIG.currency}${item.balance.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
         `;
         tbody.appendChild(row);
     });
+}
+
+/**
+ * Toggles the lock status of a month in the timeline.
+ * Persists changes immediately.
+ */
+function toggleMonthLock(index) {
+    // We need to read current data from DOM or global if we had one.
+    // Current app uses render/scrape pattern.
+    const row = document.querySelector(`input[data-index="${index}"]`)?.closest('tr');
+    if (!row) return;
+
+    const lockBtn = row.querySelector('.lock-btn');
+    const isLocked = !lockBtn.classList.contains('locked');
+
+    // Update UI immediately (visual feedback)
+    lockBtn.classList.toggle('locked', isLocked);
+    lockBtn.innerHTML = isLocked ? '🔒' : '🔓';
+    lockBtn.title = isLocked ? 'Unlock month' : 'Lock month';
+    row.classList.toggle('locked-row', isLocked);
+    
+    // Update inputs
+    const inputs = row.querySelectorAll('input');
+    inputs.forEach(input => {
+        if (isLocked) input.setAttribute('readonly', 'true');
+        else input.removeAttribute('readonly');
+    });
+
+    // Save state
+    saveTimelineData();
 }
 
 function saveTimelineData() {
@@ -1464,8 +1868,12 @@ function saveTimelineData() {
         const expenseInput = document.querySelector(`input[data-index="${i}"][data-field="expenses"]`);
 
         if (incomeInput && expenseInput) {
+            const lockBtn = incomeInput.closest('tr')?.querySelector('.lock-btn');
+            const isLocked = lockBtn?.classList.contains('locked') || false;
+
             currentData[i].income = parseFloat(incomeInput.value) || 0;
             currentData[i].expenses = parseFloat(expenseInput.value) || 0;
+            currentData[i].isLocked = isLocked;
         }
     }
 
@@ -1486,13 +1894,50 @@ function saveTimelineData() {
         });
 }
 
+/**
+ * Automatically populates the timeline data using current income and expenses.
+ * Re-calculates balances for the next 36 months.
+ */
 function autoPopulateTimeline() {
-    if (confirm('This will update all months in the table with your current monthly Income and Expenses. Manual overrides will be lost. Proceed?')) {
+    if (confirm('This will update all UNLOCKED months with your current monthly Income and Expenses. Locked months will be preserved. Proceed?')) {
+        const { totalIncome, totalExpense } = calculateBaseMonthlyValues();
+        
+        // We need the current full timeline data to preserve locks
+        // Current saveTimelineData returns the data structure.
+        // Let's scrape what we have and only update non-locked ones.
+        
+        const rows = document.querySelectorAll('#timelineBody tr:not([style*="background-color: #e2e8f0"])'); // exclude year headers
         const years = getTimelineYears();
-        const timelineData = generateMonthData(years);
+        let timelineData = generateMonthData(years); // Get structure
+
+        // Load existing status from window.timelineOverrides if available, or scrape DOM
+        // The most reliable is to map against window.timelineOverrides or what we are currently showing.
+        
+        const inputs = document.querySelectorAll('.timeline-input');
+        const rowsCount = inputs.length / 2;
+
+        for (let i = 0; i < rowsCount; i++) {
+            const incomeInput = document.querySelector(`input[data-index="${i}"][data-field="income"]`);
+            const lockBtn = incomeInput?.closest('tr')?.querySelector('.lock-btn');
+            const isLocked = lockBtn?.classList.contains('locked') || false;
+
+            if (isLocked) {
+                // Keep existing values
+                const expenseInput = document.querySelector(`input[data-index="${i}"][data-field="expenses"]`);
+                timelineData[i].income = parseFloat(incomeInput.value) || 0;
+                timelineData[i].expenses = parseFloat(expenseInput.value) || 0;
+                timelineData[i].isLocked = true;
+            } else {
+                // Update with fresh defaults
+                timelineData[i].income = parseFloat(totalIncome.toFixed(2));
+                timelineData[i].expenses = parseFloat(totalExpense.toFixed(2));
+                timelineData[i].isLocked = false;
+            }
+        }
+
         renderTimelineTable(timelineData);
-        saveTimelineData(); // Auto save the new populated data
-        notify('✅ Timeline refreshed from current finances!', NOTIFICATION_TYPES.SUCCESS);
+        saveTimelineData(); 
+        notify('✅ Timeline refreshed! (Locked months preserved)', NOTIFICATION_TYPES.SUCCESS);
     }
 }
 
@@ -1564,6 +2009,10 @@ function renderBalanceChart(timelineData) {
 
 // ==================== SETTINGS LOGIC ====================
 
+/**
+ * Synchronizes the Settings tab UI with the current application state.
+ * Refreshes dropdowns and input values.
+ */
 function syncSettingsUI() {
     const colorInput = document.getElementById('settingPrimaryColor');
     const darkModeInput = document.getElementById('settingDarkMode');
@@ -1652,13 +2101,48 @@ function renderMetadataManagers() {
 
         // Also update any dropdowns that need this data immediately
         if (type === 'categories') {
-            const filter = document.getElementById('categoryFilter');
-            if (filter) {
-                const currentVal = filter.value;
-                filter.innerHTML = '<option value="">All Categories</option>' + 
+            // Update Form Dropdown
+            const formSelect = document.getElementById('formCategory');
+            if (formSelect) {
+                const currentVal = formSelect.value;
+                formSelect.innerHTML = '<option value="">Select Category</option>' + 
                     items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                filter.value = currentVal;
+                formSelect.value = currentVal;
             }
+            // Update Filter Dropdown
+            const filterSelect = document.getElementById('filterCategory');
+            if (filterSelect) {
+                const currentVal = filterSelect.value;
+                filterSelect.innerHTML = '<option value="">All</option>' + 
+                    items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                filterSelect.value = currentVal;
+            }
+        } else if (type === 'statuses') {
+             // Update Form Dropdown
+             const formSelect = document.getElementById('formStatus');
+             if (formSelect) {
+                 const currentVal = formSelect.value;
+                 formSelect.innerHTML = '<option value="">Select Status</option>' + 
+                     items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                 formSelect.value = currentVal;
+             }
+             // Update Filter Dropdown
+             const filterSelect = document.getElementById('filterStatus');
+             if (filterSelect) {
+                 const currentVal = filterSelect.value;
+                 filterSelect.innerHTML = '<option value="">All</option>' + 
+                     items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                 filterSelect.value = currentVal;
+             }
+        } else if (type === 'criticalities') {
+             // Update Form Dropdown
+             const formSelect = document.getElementById('formCriticality');
+             if (formSelect) {
+                 const currentVal = formSelect.value;
+                 formSelect.innerHTML = '<option value="">Select Level</option>' + 
+                     items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                 formSelect.value = currentVal;
+             }
         }
     };
 
@@ -1736,6 +2220,65 @@ function populateAccountFormDropdowns() {
     }
 }
 
+
+
+function populateTemplateDropdown() {
+    const presetSelect = document.getElementById('formPreset');
+    if (!presetSelect) return;
+
+    if (typeof ACCOUNT_TEMPLATES === 'undefined') return;
+
+    // Keep the first default option
+    presetSelect.innerHTML = '<option value="">Select a preset...</option>';
+    
+    ACCOUNT_TEMPLATES.forEach((tpl, index) => {
+        const opt = document.createElement('option');
+        opt.value = index;
+        opt.textContent = `${tpl.type === 'income' ? '📈' : '📉'} ${tpl.name}`;
+        presetSelect.appendChild(opt);
+    });
+}
+
+function applyPreset() {
+    const presetSelect = document.getElementById('formPreset');
+    const index = presetSelect.value;
+    if (index === '') return;
+
+    if (typeof ACCOUNT_TEMPLATES === 'undefined') return;
+    const tpl = ACCOUNT_TEMPLATES[index];
+
+    // Auto-fill fields
+    if (formService) formService.value = tpl.name;
+    if (formType) formType.value = tpl.type;
+    
+    // Handle Category - check if exists, if not default to 'Other' or add it?
+    // Let's try to match it.
+    if (formCategory) {
+        // We need to check if the category exists in the dropdown (which comes from appSettings)
+        const options = Array.from(formCategory.options).map(o => o.value);
+        if (options.includes(tpl.category)) {
+            formCategory.value = tpl.category;
+        } else {
+            // If template category is missing from user settings, default to 'Other' or first option
+            // Or better: auto-add it to temporary state? No, stick to existing list.
+            formCategory.value = 'Other'; 
+            notify(`Category "${tpl.category}" not found in your list. Defaulted to "Other".`, NOTIFICATION_TYPES.INFO);
+        }
+    }
+
+    if (formCriticality) {
+        // Similar check for priority
+        const options = Array.from(formCriticality.options).map(o => o.value);
+        if (options.includes(tpl.priority)) {
+            formCriticality.value = tpl.priority;
+        }
+    }
+}
+
+/**
+ * Applies the current application settings to the system.
+ * Updates theme, timeout logic, and UI preferences.
+ */
 function applySettings() {
     // 1. Apply Theme
     if (appSettings.theme === 'dark') {
@@ -1848,8 +2391,7 @@ const cardsToSave = includeSeed ? [
         displayName: "Dad",
         fullName: "Abir",
         dateOfBirth: "1990-09-26",
-        job: "Software Consultant and Technical Support Specialist",
-        income: "70000"
+        job: "Software Consultant and Technical Support Specialist"
     },
     {
         id: "card_1769082534972",
@@ -1866,42 +2408,42 @@ const cardsToSave = includeSeed ? [
 const timelineToSave = includeSeed ? {
     startingBalance: 100,
     months: [
-        { id: "2025-January", year: 2025, month: "January", display: "2025 - January", income: 1800, expenses: 2000 },
-        { id: "2025-February", year: 2025, month: "February", display: "2025 - February", income: 1800, expenses: 1500 },
-        { id: "2025-March", year: 2025, month: "March", display: "2025 - March", income: 1800, expenses: 1500 },
-        { id: "2025-April", year: 2025, month: "April", display: "2025 - April", income: 1800, expenses: 1500 },
-        { id: "2025-May", year: 2025, month: "May", display: "2025 - May", income: 1800, expenses: 1500 },
-        { id: "2025-June", year: 2025, month: "June", display: "2025 - June", income: 1800, expenses: 1500 },
-        { id: "2025-July", year: 2025, month: "July", display: "2025 - July", income: 1800, expenses: 1500 },
-        { id: "2025-August", year: 2025, month: "August", display: "2025 - August", income: 1800, expenses: 1500 },
-        { id: "2025-September", year: 2025, month: "September", display: "2025 - September", income: 1800, expenses: 1500 },
-        { id: "2025-October", year: 2025, month: "October", display: "2025 - October", income: 1800, expenses: 1500 },
-        { id: "2025-November", year: 2025, month: "November", display: "2025 - November", income: 1800, expenses: 1500 },
-        { id: "2025-December", year: 2025, month: "December", display: "2025 - December", income: 1800, expenses: 1500 },
-        { id: "2026-January", year: 2026, month: "January", display: "2026 - January", income: 1800, expenses: 1500 },
-        { id: "2026-February", year: 2026, month: "February", display: "2026 - February", income: 1800, expenses: 1500 },
-        { id: "2026-March", year: 2026, month: "March", display: "2026 - March", income: 1800, expenses: 1500 },
-        { id: "2026-April", year: 2026, month: "April", display: "2026 - April", income: 1800, expenses: 1500 },
-        { id: "2026-May", year: 2026, month: "May", display: "2026 - May", income: 1800, expenses: 1500 },
-        { id: "2026-June", year: 2026, month: "June", display: "2026 - June", income: 1800, expenses: 1500 },
-        { id: "2026-July", year: 2026, month: "July", display: "2026 - July", income: 1800, expenses: 1500 },
-        { id: "2026-August", year: 2026, month: "August", display: "2026 - August", income: 1800, expenses: 1500 },
-        { id: "2026-September", year: 2026, month: "September", display: "2026 - September", income: 1800, expenses: 1500 },
-        { id: "2026-October", year: 2026, month: "October", display: "2026 - October", income: 1800, expenses: 1500 },
-        { id: "2026-November", year: 2026, month: "November", display: "2026 - November", income: 1800, expenses: 1500 },
-        { id: "2026-December", year: 2026, month: "December", display: "2026 - December", income: 1800, expenses: 1500 },
-        { id: "2027-January", year: 2027, month: "January", display: "2027 - January", income: 1800, expenses: 1500 },
-        { id: "2027-February", year: 2027, month: "February", display: "2027 - February", income: 1800, expenses: 1500 },
-        { id: "2027-March", year: 2027, month: "March", display: "2027 - March", income: 1800, expenses: 1500 },
-        { id: "2027-April", year: 2027, month: "April", display: "2027 - April", income: 600, expenses: 1500 },
-        { id: "2027-May", year: 2027, month: "May", display: "2027 - May", income: 600, expenses: 1500 },
-        { id: "2027-June", year: 2027, month: "June", display: "2027 - June", income: 600, expenses: 1500 },
-        { id: "2027-July", year: 2027, month: "July", display: "2027 - July", income: 600, expenses: 1500 },
-        { id: "2027-August", year: 2027, month: "August", display: "2027 - August", income: 600, expenses: 1500 },
-        { id: "2027-September", year: 2027, month: "September", display: "2027 - September", income: 600, expenses: 1500 },
-        { id: "2027-October", year: 2027, month: "October", display: "2027 - October", income: 600, expenses: 1500 },
-        { id: "2027-November", year: 2027, month: "November", display: "2027 - November", income: 600, expenses: 1500 },
-        { id: "2027-December", year: 2027, month: "December", display: "2027 - December", income: 0, expenses: 1500 }
+        { id: "2025-January", year: 2025, month: "January", display: "2025 - January", income: 1800, expenses: 2000, isLocked: false },
+        { id: "2025-February", year: 2025, month: "February", display: "2025 - February", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-March", year: 2025, month: "March", display: "2025 - March", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-April", year: 2025, month: "April", display: "2025 - April", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-May", year: 2025, month: "May", display: "2025 - May", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-June", year: 2025, month: "June", display: "2025 - June", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-July", year: 2025, month: "July", display: "2025 - July", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-August", year: 2025, month: "August", display: "2025 - August", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-September", year: 2025, month: "September", display: "2025 - September", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-October", year: 2025, month: "October", display: "2025 - October", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-November", year: 2025, month: "November", display: "2025 - November", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2025-December", year: 2025, month: "December", display: "2025 - December", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-January", year: 2026, month: "January", display: "2026 - January", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-February", year: 2026, month: "February", display: "2026 - February", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-March", year: 2026, month: "March", display: "2026 - March", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-April", year: 2026, month: "April", display: "2026 - April", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-May", year: 2026, month: "May", display: "2026 - May", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-June", year: 2026, month: "June", display: "2026 - June", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-July", year: 2026, month: "July", display: "2026 - July", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-August", year: 2026, month: "August", display: "2026 - August", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-September", year: 2026, month: "September", display: "2026 - September", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-October", year: 2026, month: "October", display: "2026 - October", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-November", year: 2026, month: "November", display: "2026 - November", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2026-December", year: 2026, month: "December", display: "2026 - December", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2027-January", year: 2027, month: "January", display: "2027 - January", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2027-February", year: 2027, month: "February", display: "2027 - February", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2027-March", year: 2027, month: "March", display: "2027 - March", income: 1800, expenses: 1500, isLocked: false },
+        { id: "2027-April", year: 2027, month: "April", display: "2027 - April", income: 1700, expenses: 1140, isLocked: false },
+        { id: "2027-May", year: 2027, month: "May", display: "2027 - May", income: 1700, expenses: 1140, isLocked: false },
+        { id: "2027-June", year: 2027, month: "June", display: "2027 - June", income: 1700, expenses: 1140, isLocked: false },
+        { id: "2027-July", year: 2027, month: "July", display: "2027 - July", income: 1700, expenses: 1140, isLocked: false },
+        { id: "2027-August", year: 2027, month: "August", display: "2027 - August", income: 1700, expenses: 1140, isLocked: false },
+        { id: "2027-September", year: 2027, month: "September", display: "2027 - September", income: 1700, expenses: 1140, isLocked: false },
+        { id: "2027-October", year: 2027, month: "October", display: "2027 - October", income: 1700, expenses: 1140, isLocked: false },
+        { id: "2027-November", year: 2027, month: "November", display: "2027 - November", income: 1700, expenses: 1140, isLocked: false },
+        { id: "2027-December", year: 2027, month: "December", display: "2027 - December", income: 1700, expenses: 1140, isLocked: false }
     ]
 } : { months: [], startingBalance: 0 };
 
@@ -1909,6 +2451,7 @@ Promise.all([
     saveToIndexedDB(DB_CONFIG.stores.accounts, accountsToSave, 'allAccounts'),
     saveToIndexedDB(DB_CONFIG.stores.profile, cardsToSave, 'cards'),
     saveToIndexedDB(DB_CONFIG.stores.timeline, timelineToSave, 'timelineData'),
+    saveToIndexedDB(DB_CONFIG.stores.goals, [], 'goals'),
     saveToIndexedDB(DB_CONFIG.stores.settings, DEFAULT_SETTINGS, 'appSettings')
 ]).then(() => {
     notify('✅ Factory reset complete! Reloading...', NOTIFICATION_TYPES.SUCCESS);
@@ -1916,11 +2459,12 @@ Promise.all([
 });
 }
 const SEED_DATA = [
-    [1, "Google Gemini", "AI Tools", "expense", 0, 0, "No", "Active", "Optional"],
-    [2, "Rent", "Household & Home", "expense", 1000, 0, "Yes", "Active", "Important"],
-    [3, "ChatGPT", "AI Tools", "expense", 0, 0, "No", "Planned", "Optional"],
-    [4, "Naturstrom", "Utilities & Bills", "expense", 40, 0, "Yes", "Active", "Important"],
-    [5, "Groceries", "Shopping & E-Commerce", "expense", 100, 0, "Yes", "Active", "Important"]
+    [1, "Primary Salary", "Productivity & Work", "income", 3500, 0, "No", "Active", "Critical"],
+    [2, "Google Gemini", "AI Tools", "expense", 0, 0, "No", "Active", "Optional"],
+    [3, "Rent", "Household & Home", "expense", 1200, 0, "Yes", "Active", "Critical"],
+    [4, "ChatGPT", "AI Tools", "expense", 20, 0, "No", "Active", "Optional"],
+    [5, "Naturstrom", "Utilities & Bills", "expense", 45, 0, "Yes", "Active", "Important"],
+    [6, "Groceries", "Food & Dining", "expense", 400, 0, "Yes", "Active", "Critical"]
 ];
 
 function downloadCSV() {
@@ -1952,10 +2496,159 @@ function downloadCSV() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "expenses_report.csv");
+    link.setAttribute("download", "balance_report.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// ==================== GOALS MANAGEMENT ====================
+
+function renderGoals() {
+    const goalsList = document.getElementById('goalsList');
+    if (!goalsList) return;
+    
+    goalsList.innerHTML = '';
+
+    if (goals.length === 0) {
+        goalsList.innerHTML = '<p style="text-align:center; padding: 20px; color: #718096;">No goals set yet. Start dreaming! 🚀</p>';
+        return;
+    }
+
+    // Get current net flow for ETA logic
+    const { totalIncome, totalExpense } = calculateBaseMonthlyValues();
+    const netFlow = totalIncome - totalExpense;
+
+    goals.forEach(goal => {
+        const percentage = Math.min(100, Math.max(0, (goal.current / goal.target) * 100));
+        const colorClass = percentage >= 100 ? 'status-paid' : (percentage >= 50 ? 'type-income' : 'type-expense');
+        
+        // Calculate ETA
+        let etaText = '';
+        if (percentage >= 100) {
+            etaText = '✅ Goal Reached!';
+        } else if (netFlow > 0) {
+            const remaining = goal.target - goal.current;
+            const months = Math.ceil(remaining / netFlow);
+            etaText = `⏳ Est. ready in ${months} month${months > 1 ? 's' : ''}`;
+        } else {
+            etaText = '⚠️ Increase net flow to save';
+        }
+
+        const goalCard = document.createElement('div');
+        goalCard.className = 'goal-card';
+        goalCard.innerHTML = `
+            <div class="goal-header">
+                <div>
+                    <div class="goal-name">${goal.name}</div>
+                    <div class="goal-eta" style="font-size: 11px; color: #64748b; margin-top: 4px;">${etaText}</div>
+                </div>
+                <div class="goal-actions">
+                    <button class="btn-icon-tiny" onclick="editGoal('${goal.id}')">✏️</button>
+                    <button class="btn-icon-tiny delete" onclick="deleteGoal('${goal.id}')">🗑️</button>
+                </div>
+            </div>
+            <div class="goal-stats">
+                <span>${TIMELINE_CONFIG.currency}${goal.current.toLocaleString()} saved</span>
+                <span>Target: ${TIMELINE_CONFIG.currency}${goal.target.toLocaleString()}</span>
+            </div>
+            <div class="goal-progress-container">
+                <div class="goal-progress-bar ${colorClass}" style="width: ${percentage}%"></div>
+            </div>
+            <div style="text-align: right; font-size: 12px; margin-top: 5px; font-weight: 700; color: #475569;">
+                ${percentage.toFixed(1)}%
+            </div>
+        `;
+        goalsList.appendChild(goalCard);
+    });
+}
+
+let editingGoalId = null;
+
+function addGoal() {
+    editingGoalId = null;
+    const modal = document.getElementById('goalModal');
+    const nameInput = document.getElementById('goalName');
+    const targetInput = document.getElementById('goalTarget');
+    const currentInput = document.getElementById('goalCurrent');
+    
+    if (nameInput) nameInput.value = '';
+    if (targetInput) targetInput.value = '';
+    if (currentInput) currentInput.value = '0';
+    
+    if (modal) modal.classList.add('active');
+}
+
+function editGoal(id) {
+    const goal = goals.find(g => g.id === id);
+    if (!goal) return;
+
+    editingGoalId = id;
+    const modal = document.getElementById('goalModal');
+    document.getElementById('goalName').value = goal.name;
+    document.getElementById('goalTarget').value = goal.target;
+    document.getElementById('goalCurrent').value = goal.current;
+    
+    if (modal) modal.classList.add('active');
+}
+
+function closeGoalModal() {
+    document.getElementById('goalModal').classList.remove('active');
+    editingGoalId = null;
+}
+
+function saveGoal() {
+    const nameRaw = document.getElementById('goalName').value.trim();
+    const targetRaw = document.getElementById('goalTarget').value;
+    const currentRaw = document.getElementById('goalCurrent').value;
+
+    // Sanitize inputs
+    const name = sanitizeInput(nameRaw, 100);
+    const target = sanitizeNumber(targetRaw, 1, 100000000); // Max 100M
+    const current = sanitizeNumber(currentRaw, 0, 100000000);
+
+    if (!name || target <= 0) {
+        notify('⚠️ Please enter a valid name and target amount.', NOTIFICATION_TYPES.WARNING);
+        return;
+    }
+
+    if (name.length < 1) {
+        notify('❌ Goal name must not be empty after sanitization', NOTIFICATION_TYPES.ERROR);
+        return;
+    }
+
+    if (editingGoalId) {
+        const index = goals.findIndex(g => g.id === editingGoalId);
+        if (index !== -1) {
+            goals[index] = { ...goals[index], name, target, current };
+        }
+    } else {
+        goals.push({
+            id: 'goal_' + Date.now(),
+            name,
+            target,
+            current,
+            createdAt: new Date().toISOString()
+        });
+    }
+
+    saveToIndexedDB(DB_CONFIG.stores.goals, goals, 'goals')
+        .then(() => {
+            closeGoalModal();
+            renderGoals();
+            notify('✅ Goal saved successfully!', NOTIFICATION_TYPES.SUCCESS);
+        });
+}
+
+function deleteGoal(id) {
+    if (confirm('Delete this financial goal?')) {
+        goals = goals.filter(g => g.id !== id);
+        saveToIndexedDB(DB_CONFIG.stores.goals, goals, 'goals')
+            .then(() => {
+                renderGoals();
+                notify('🗑️ Goal deleted.', NOTIFICATION_TYPES.SUCCESS);
+            });
+    }
 }
 
 // ==================== EVENT LISTENERS ====================
@@ -1990,70 +2683,64 @@ if (typeof DB_CONFIG === 'undefined') {
 
 initIndexedDB()
     .then(async () => {
+        // Load ALL data once at startup to establish authoritative memory state
         try {
-            // Load cards
-            const savedCards = await loadFromIndexedDB(DB_CONFIG.stores.profile, 'cards');
-            if (savedCards && Array.isArray(savedCards) && savedCards.length > 0) {
+            const response = await fetch(API_URL, { cache: 'no-store' });
+            if (!response.ok) throw new Error('Failed to load initial data');
+            const fullData = await response.json();
+
+            // 1. Process Cards
+            const savedCards = fullData[DB_CONFIG.stores.profile]?.cards;
+            if (savedCards !== undefined && savedCards !== null) {
                 cards = savedCards;
             } else {
-                // Load seed cards on first startup
+                // Load defaults if empty (First run only)
                 cards = [
-                    {
-                        id: "card_1769082468127",
-                        type: "adult",
-                        emoji: "👨",
-                        displayName: "Dad",
-                        fullName: "Abir",
-                        dateOfBirth: "1990-09-26",
-                        job: "Software Consultant and Technical Support Specialist",
-                        income: "70000"
-                    },
-                    {
-                        id: "card_1769082534972",
-                        type: "pet",
-                        emoji: "🐕",
-                        displayName: "Dog",
-                        fullName: "Nuka",
-                        dateOfBirth: "2023-03-01",
-                        breed: "German Shepherd/Border Collie"
-                    }
+                    { id: "card_1769082468127", type: "adult", emoji: "👨", displayName: "Dad", fullName: "Abir", dateOfBirth: "1990-09-26", job: "Software Consultant and Technical Support Specialist" },
+                    { id: "card_1769082534972", type: "pet", emoji: "🐕", displayName: "Dog", fullName: "Nuka", dateOfBirth: "2023-03-01", breed: "German Shepherd/Border Collie" }
                 ];
                 await saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards');
             }
-        } catch (err) {
-            console.error('Error loading cards:', err);
-        }
 
-        renderCards();
-
-        try {
-            // Load accounts
-            const savedAccounts = await loadFromIndexedDB(DB_CONFIG.stores.accounts, 'allAccounts');
-            if (savedAccounts && Array.isArray(savedAccounts) && savedAccounts.length > 0) {
+            // 2. Process Accounts
+            const savedAccounts = fullData[DB_CONFIG.stores.accounts];
+            if (savedAccounts !== undefined && savedAccounts !== null) {
                 accounts = savedAccounts;
             } else {
-                // Load seed accounts on first startup
+                // Load defaults if missing (First run only)
                 accounts = convertAccountsToObjects(SEED_DATA);
                 await saveToIndexedDB(DB_CONFIG.stores.accounts, accounts, 'allAccounts');
             }
-        } catch (err) {
-            console.error('Error loading accounts:', err);
-        }
 
-        renderAccounts();
-        updateStats();
-        initializeTimelineData();
+            // 3. Process Timeline Overrides
+            window.timelineOverrides = fullData[DB_CONFIG.stores.timeline]?.timelineData;
 
-        try {
-            // Load settings
-            const savedSettings = await loadFromIndexedDB(DB_CONFIG.stores.settings, 'appSettings');
+            // 4. Process Goals
+            const savedGoals = fullData[DB_CONFIG.stores.goals];
+            if (savedGoals && Array.isArray(savedGoals)) {
+                goals = savedGoals;
+            }
+
+            // 5. Process Settings
+            const savedSettings = fullData[DB_CONFIG.stores.settings]?.appSettings;
             if (savedSettings) {
                 appSettings = { ...DEFAULT_SETTINGS, ...savedSettings };
             }
+
+            // Establish UI
+            renderCards();
+            renderAccounts();
+            renderGoals();
+            updateStats();
+            initializeTimelineData();
             applySettings();
+
         } catch (err) {
-            console.error('Error loading settings:', err);
-            applySettings(); // Apply defaults
+            console.error('Initialization error:', err);
+            // Re-render empty UI as fallback
+            renderCards();
+            renderAccounts();
+            updateStats();
         }
     })
     .catch(err => {
