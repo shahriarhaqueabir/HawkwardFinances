@@ -26,7 +26,7 @@ const DEFAULT_SETTINGS = {
     categories: [
         "Productivity & Work",
         "Household & Home",
-        "Utility Services",
+        "Utilities & Bills",
         "Health & Wellness",
         "Automotive & Transport",
         "Financial & Insurance",
