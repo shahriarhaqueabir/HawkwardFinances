@@ -1,14 +1,12 @@
 {
-  "ci": {
-    "collect": {
-      "startServerCommand": "npm start",
-      "url": [
-        "http://localhost:3000/Index.html"
-      ],
-      "numberOfRuns": 1
-    },
-    "upload": {
-      "target": "temporary-public-storage"
+    "ci": {
+        "collect": {
+            "startServerCommand": "npm start",
+            "url": ["http://localhost:3000/Index.html"],
+            "numberOfRuns": 1
+        },
+        "upload": {
+            "target": "temporary-public-storage"
+        }
     }
-  }
 }

@@ -1,25 +1,25 @@
 name: Lighthouse CI
 
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    push:
+        branches: [main, master]
+    pull_request:
+        branches: [main, master]
 
 jobs:
-  lighthouse:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    lighthouse:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
 
-      - name: Run Lighthouse
-        uses: treosh/lighthouse-ci-action@v12
-        with:
-          configPath: ./lighthouserc.json
-          uploadArtifacts: true # still save results as an action artifact
+            - name: Run Lighthouse
+              uses: treosh/lighthouse-ci-action@v12
+              with:
+                  configPath: ./lighthouserc.json
+                  uploadArtifacts: true # still save results as an action artifact
 

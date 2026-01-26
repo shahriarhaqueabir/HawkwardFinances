@@ -31,19 +31,18 @@ let AUTO_SHUTDOWN_ENABLED = true;
 const IS_CI = process.env.CI === 'true';
 
 function resetShutdownTimer() {
-  if (shutdownTimer) clearTimeout(shutdownTimer);
-  if (!AUTO_SHUTDOWN_ENABLED || IS_CI) return;
+    if (shutdownTimer) clearTimeout(shutdownTimer);
+    if (!AUTO_SHUTDOWN_ENABLED || IS_CI) return;
 
-  shutdownTimer = setTimeout(() => {
-    console.log("No active tab detected. Shutting down...");
-    process.exit(0);
-  }, SHUTDOWN_TIMEOUT);
+    shutdownTimer = setTimeout(() => {
+        console.log('No active tab detected. Shutting down...');
+        process.exit(0);
+    }, SHUTDOWN_TIMEOUT);
 }
-
 
 // Start the timer immediately (unless in CI)
 if (!IS_CI) {
-  resetShutdownTimer();
+    resetShutdownTimer();
 }
 
 // ---------------------------
@@ -60,7 +59,7 @@ if (!fs.existsSync(DATA_FILE)) {
         profile: {},
         timeline: {},
         goals: [],
-        settings: {}
+        settings: {},
     };
     fs.writeFileSync(DATA_FILE, JSON.stringify(initialData, null, 2));
 }
@@ -85,7 +84,7 @@ app.get('/api/data', (req, res) => {
         res.json(JSON.parse(data));
     } catch (err) {
         console.error('Error reading/parsing data:', err);
-        
+
         // Attempt to restore from backup
         const backupPath = path.join(__dirname, 'data.backup.json');
         if (fs.existsSync(backupPath)) {
@@ -93,23 +92,23 @@ app.get('/api/data', (req, res) => {
                 console.log('⚠️ Data corrupted. Attempting to restore from backup...');
                 const backup = fs.readFileSync(backupPath, 'utf8');
                 const backupData = JSON.parse(backup);
-                
+
                 // Restore the backup to main file
                 fs.writeFileSync(DATA_FILE, backup);
                 console.log('✅ Successfully restored from backup');
-                
+
                 res.json(backupData);
             } catch (backupErr) {
                 console.error('❌ Backup restoration failed:', backupErr);
-                res.status(500).json({ 
+                res.status(500).json({
                     error: 'Data corrupted and backup restoration failed',
-                    details: backupErr.message 
+                    details: backupErr.message,
                 });
             }
         } else {
-            res.status(500).json({ 
+            res.status(500).json({
                 error: 'Data corrupted and no backup available',
-                details: err.message 
+                details: err.message,
             });
         }
     }
@@ -167,12 +166,12 @@ app.post('/api/data', (req, res) => {
 app.post('/api/import', (req, res) => {
     try {
         const newData = req.body;
-        
+
         // Basic validation to ensure it's a valid finance app snapshot
         if (!newData || typeof newData !== 'object') {
             return res.status(400).json({ error: 'Invalid JSON data' });
         }
-        
+
         // Create safety backup before overwriting
         const safetyBackupPath = path.join(__dirname, 'data.import_safety.json');
         if (fs.existsSync(DATA_FILE)) {
@@ -183,7 +182,7 @@ app.post('/api/import', (req, res) => {
         // Write to disk
         fs.writeFileSync(DATA_FILE, JSON.stringify(newData, null, 2));
         console.log('🔄 Database restored from import');
-        
+
         res.json({ message: 'Database restored successfully (Safety backup created)' });
     } catch (err) {
         console.error('Import Error:', err);
@@ -200,28 +199,30 @@ app.post('/api/heartbeat', (req, res) => {
 // Settings endpoint
 app.post('/api/settings/system', (req, res) => {
     const { timeout, enabled } = req.body;
-    
+
     if (timeout !== undefined) {
         SHUTDOWN_TIMEOUT = parseInt(timeout) * 1000;
         console.log(`System: Shutdown timeout updated to ${timeout}s`);
     }
-    
+
     if (enabled !== undefined) {
         AUTO_SHUTDOWN_ENABLED = enabled;
         console.log(`System: Auto-shutdown ${enabled ? 'ENABLED' : 'DISABLED'}`);
     }
-    
+
     resetShutdownTimer();
-    res.json({ 
-        success: true, 
-        timeout: SHUTDOWN_TIMEOUT / 1000, 
-        enabled: AUTO_SHUTDOWN_ENABLED 
+    res.json({
+        success: true,
+        timeout: SHUTDOWN_TIMEOUT / 1000,
+        enabled: AUTO_SHUTDOWN_ENABLED,
     });
 });
 
 // Tab closed endpoint (missing!)
 app.post('/api/tab-closed', (req, res) => {
-    console.log('Tab closed signal received. Server will shutdown in ' + (SHUTDOWN_TIMEOUT / 1000) + 's');
+    console.log(
+        'Tab closed signal received. Server will shutdown in ' + SHUTDOWN_TIMEOUT / 1000 + 's'
+    );
     // Timer already started by heartbeat stopping
     res.json({ acknowledged: true });
 });
@@ -234,8 +235,10 @@ app.listen(PORT, async () => {
     console.log(`Local Access:   http://localhost:${PORT}`);
     console.log(`Network Access: http://${LOCAL_IP}:${PORT}`);
     console.log('--------------------------------------------------');
-    console.log(`Auto-shutdown active: Server will exit ${SHUTDOWN_TIMEOUT / 1000}s after tab is closed.`);
-    
+    console.log(
+        `Auto-shutdown active: Server will exit ${SHUTDOWN_TIMEOUT / 1000}s after tab is closed.`
+    );
+
     if (!IS_CI) {
         try {
             const open = (await import('open')).default;

@@ -9,9 +9,9 @@ This application is now **100% standalone**. You can move the entire project fol
 
 ## What is Automated?
 
-* **Node.js Runtime**: If Node.js is not installed on the computer, the launcher will automatically download a portable version into a `bin/` folder.
-* **Dependencies**: All required backend packages will be installed automatically on the first run.
-* **Offline Charts**: The charting library (`Chart.js`) is now bundled locally, so you don't need internet to see your financial reports.
+- **Node.js Runtime**: If Node.js is not installed on the computer, the launcher will automatically download a portable version into a `bin/` folder.
+- **Dependencies**: All required backend packages will be installed automatically on the first run.
+- **Offline Charts**: The charting library (`Chart.js`) is now bundled locally, so you don't need internet to see your financial reports.
 
 ## Networking
 

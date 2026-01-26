@@ -11,16 +11,16 @@ The application is built using a modern modular architecture, separating concern
 ### **Core Technologies**
 
 - **Frontend**:
-  - **HTML5**: Semantic structure for the dashboard.
-  - **Vanilla CSS**: Custom design system using CSS Variables (Custom Properties).
-  - **Vanilla JavaScript (ES6+)**: Handles state management, DOM manipulation, and business logic.
-  - **Chart.js**: Utilized for rich data visualization and financial forecasting.
+    - **HTML5**: Semantic structure for the dashboard.
+    - **Vanilla CSS**: Custom design system using CSS Variables (Custom Properties).
+    - **Vanilla JavaScript (ES6+)**: Handles state management, DOM manipulation, and business logic.
+    - **Chart.js**: Utilized for rich data visualization and financial forecasting.
 - **Backend**:
-  - **Node.js**: Runtime environment.
-  - **Express.js**: Web server framework handling static file serving and API endpoints.
+    - **Node.js**: Runtime environment.
+    - **Express.js**: Web server framework handling static file serving and API endpoints.
 - **Data Persistence**:
-  - **JSON-based Storage**: A `data.json` file serves as the local database, managed via the server-side API.
-  - **IndexedDB**: Used for client-side caching and offline capabilities.
+    - **JSON-based Storage**: A `data.json` file serves as the local database, managed via the server-side API.
+    - **IndexedDB**: Used for client-side caching and offline capabilities.
 
 ---
 

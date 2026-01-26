@@ -39,13 +39,16 @@ function initIndexedDB() {
     // We check if server is reachable and load initial data
     return new Promise((resolve, reject) => {
         fetch(API_URL, { cache: 'no-store' })
-            .then(response => {
+            .then((response) => {
                 if (!response.ok) throw new Error('Server not reachable');
                 resolve();
             })
-            .catch(err => {
+            .catch((err) => {
                 console.error('Storage Init Error:', err);
-                notify('⚠️ Local server not running. Data will not save!', NOTIFICATION_TYPES.ERROR);
+                notify(
+                    '⚠️ Local server not running. Data will not save!',
+                    NOTIFICATION_TYPES.ERROR
+                );
                 reject(err);
             });
     });
@@ -65,14 +68,14 @@ function saveToIndexedDB(storeName, data, key = null) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ storeName, data, key })
+            body: JSON.stringify({ storeName, data, key }),
         })
-            .then(response => {
+            .then((response) => {
                 if (!response.ok) throw new Error('Save failed');
                 return response.json();
             })
             .then(() => resolve())
-            .catch(err => reject(err));
+            .catch((err) => reject(err));
     });
 }
 
@@ -83,21 +86,21 @@ function saveToIndexedDB(storeName, data, key = null) {
 function startHeartbeat() {
     // Ping every 5 seconds
     setInterval(() => {
-        fetch(`${window.location.origin}/api/heartbeat`, { 
+        fetch(`${window.location.origin}/api/heartbeat`, {
             method: 'POST',
-            keepalive: true // Ensure request completes even if tab is closing
-        }).catch(err => console.debug('Heartbeat failed (server likely closed)'));
+            keepalive: true, // Ensure request completes even if tab is closing
+        }).catch((err) => console.debug('Heartbeat failed (server likely closed)'));
     }, 5000);
 }
 
 function loadFromIndexedDB(storeName, key = null) {
     return new Promise((resolve, reject) => {
         fetch(API_URL, { cache: 'no-store' })
-            .then(response => {
+            .then((response) => {
                 if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                 return response.json();
             })
-            .then(fullData => {
+            .then((fullData) => {
                 const storeData = fullData[storeName];
 
                 if (!storeData) {
@@ -105,13 +108,17 @@ function loadFromIndexedDB(storeName, key = null) {
                     return;
                 }
 
-                if ((storeName === DB_CONFIG.stores.profile || storeName === DB_CONFIG.stores.timeline) && key) {
+                if (
+                    (storeName === DB_CONFIG.stores.profile ||
+                        storeName === DB_CONFIG.stores.timeline) &&
+                    key
+                ) {
                     resolve(storeData[key]);
                 } else {
                     resolve(storeData);
                 }
             })
-            .catch(err => reject(err));
+            .catch((err) => reject(err));
     });
 }
 
@@ -124,21 +131,21 @@ async function exportData() {
     try {
         const response = await fetch(API_URL);
         if (!response.ok) throw new Error('Failed to fetch data');
-        
+
         const data = await response.json();
         const dataStr = JSON.stringify(data, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        
+
         const url = URL.createObjectURL(dataBlob);
         const link = document.createElement('a');
         link.href = url;
         link.download = `financial_backup_${new Date().toISOString().split('T')[0]}.json`;
-        
+
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        
+
         notify('✅ Data exported successfully!', NOTIFICATION_TYPES.SUCCESS);
     } catch (err) {
         console.error('Export Error:', err);
@@ -157,13 +164,15 @@ async function importData(event) {
     reader.onload = async (e) => {
         try {
             const importContent = JSON.parse(e.target.result);
-            
+
             // Basic validation
             if (!importContent.accounts || !importContent.profile || !importContent.timeline) {
                 throw new Error('Invalid backup file format. Missing required data sections.');
             }
 
-            const confirmImport = confirm('🚨 WARNING: Importing will OVERWRITE all current data. Are you sure you want to proceed?');
+            const confirmImport = confirm(
+                '🚨 WARNING: Importing will OVERWRITE all current data. Are you sure you want to proceed?'
+            );
             if (!confirmImport) {
                 event.target.value = ''; // Reset file input
                 return;
@@ -176,19 +185,18 @@ async function importData(event) {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(importContent)
+                body: JSON.stringify(importContent),
             });
 
             if (!response.ok) throw new Error('Server import failed');
 
             const result = await response.json();
             notify('✅ Success: ' + result.message, NOTIFICATION_TYPES.SUCCESS);
-            
+
             // Reload page to show new data
             setTimeout(() => {
                 window.location.reload();
             }, UI_CONSTANTS.RELOAD_DELAY);
-
         } catch (err) {
             console.error('Import Error:', err);
             notify('❌ Import failed: ' + err.message, NOTIFICATION_TYPES.ERROR);
@@ -206,15 +214,17 @@ async function importData(event) {
  * @returns {Object} An object containing {totalIncome, totalExpense}.
  */
 function calculateBaseMonthlyValues() {
-    const accountMonthlyIncome = accounts.filter(acc => acc.type === 'income' && acc.status === 'Active')
+    const accountMonthlyIncome = accounts
+        .filter((acc) => acc.type === 'income' && acc.status === 'Active')
         .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
-    
+
     // Profile-level income is now removed from global totals per user request
     const totalIncome = accountMonthlyIncome;
 
-    const totalExpense = accounts.filter(acc => (acc.type === 'expense' || !acc.type) && acc.status === 'Active')
+    const totalExpense = accounts
+        .filter((acc) => (acc.type === 'expense' || !acc.type) && acc.status === 'Active')
         .reduce((sum, acc) => sum + (parseFloat(acc.monthlyPayment) || 0), 0);
-    
+
     return { totalIncome, totalExpense };
 }
 
@@ -224,17 +234,29 @@ function calculateBaseMonthlyValues() {
  * @returns {Object[]} Array of account objects.
  */
 function convertAccountsToObjects(accountsArray) {
-    return accountsArray.map(([id, name, category, type, monthlyPayment, annualPayment, hasReminder, status, priority]) => ({
-        id,
-        name,
-        category,
-        type,
-        monthlyPayment,
-        annualPayment,
-        hasReminder,
-        status,
-        priority
-    }));
+    return accountsArray.map(
+        ([
+            id,
+            name,
+            category,
+            type,
+            monthlyPayment,
+            annualPayment,
+            hasReminder,
+            status,
+            priority,
+        ]) => ({
+            id,
+            name,
+            category,
+            type,
+            monthlyPayment,
+            annualPayment,
+            hasReminder,
+            status,
+            priority,
+        })
+    );
 }
 
 // ==================== SECURITY UTILITIES ====================
@@ -245,16 +267,16 @@ function convertAccountsToObjects(accountsArray) {
  */
 function sanitizeInput(value, maxLength = 200) {
     if (!value) return '';
-    
+
     // Convert to string and trim
     const str = String(value).trim();
-    
+
     // Remove HTML tags
     const withoutTags = str.replace(/<[^>]*>/g, '');
-    
+
     // Limit length
     const limited = withoutTags.slice(0, maxLength);
-    
+
     return limited;
 }
 
@@ -264,16 +286,16 @@ function sanitizeInput(value, maxLength = 200) {
  */
 function escapeHtml(text) {
     if (!text) return '';
-    
+
     const map = {
         '&': '&amp;',
         '<': '&lt;',
         '>': '&gt;',
         '"': '&quot;',
-        "'": '&#039;'
+        "'": '&#039;',
     };
-    
-    return String(text).replace(/[&<>"']/g, char => map[char]);
+
+    return String(text).replace(/[&<>"']/g, (char) => map[char]);
 }
 
 /**
@@ -316,7 +338,7 @@ const TOAST_ICONS = {
     success: '✓',
     error: '✕',
     warning: '⚠',
-    info: 'ℹ'
+    info: 'ℹ',
 };
 
 function notify(message, type = NOTIFICATION_TYPES.INFO) {
@@ -331,9 +353,9 @@ function notify(message, type = NOTIFICATION_TYPES.INFO) {
     // 2. Create Toast Element
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
+
     const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
-    
+
     toast.innerHTML = `
         <div class="toast-icon">${icon}</div>
         <div class="toast-content">${message}</div>
@@ -365,10 +387,10 @@ function removeToast(toast) {
 
 function getCriticalityColor(criticality) {
     const colorMap = {
-        'Critical': COLORS.criticalBg,
-        'Essential': COLORS.essentialBg,
-        'Important': COLORS.importantBg,
-        'Optional': COLORS.optionalBg
+        Critical: COLORS.criticalBg,
+        Essential: COLORS.essentialBg,
+        Important: COLORS.importantBg,
+        Optional: COLORS.optionalBg,
     };
     return colorMap[criticality] || COLORS.importantBg;
 }
@@ -425,7 +447,7 @@ function clearAllFilters() {
     if (filterStatus) filterStatus.value = '';
     if (filterCriticality) filterCriticality.value = '';
     if (filterOwner) filterOwner.value = '';
-    
+
     filterAccounts();
     notify('🧹 All filters cleared', NOTIFICATION_TYPES.INFO);
 }
@@ -435,10 +457,22 @@ function clearAllFilters() {
  */
 function jumpToToday() {
     const now = new Date();
-    const monthNames = ["January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"];
+    const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+    ];
     const currentId = `${now.getFullYear()}-${monthNames[now.getMonth()]}`;
-    
+
     const targetRow = document.getElementById(currentId);
     if (targetRow) {
         targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -451,7 +485,7 @@ function jumpToToday() {
     }
 }
 
-navButtons.forEach(btn => {
+navButtons.forEach((btn) => {
     btn.addEventListener('click', function () {
         switchTab(this.dataset.tab);
     });
@@ -461,8 +495,8 @@ function switchTab(tabName) {
     if (!tabName) return;
 
     // Remove active class from all buttons and tabs
-    navButtons.forEach(btn => btn.classList.remove('active'));
-    tabContents.forEach(tab => tab.classList.remove('active'));
+    navButtons.forEach((btn) => btn.classList.remove('active'));
+    tabContents.forEach((tab) => tab.classList.remove('active'));
 
     // Add active class to selected button and tab
     const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
@@ -500,33 +534,72 @@ const CARD_TEMPLATES = {
         label: 'Adult',
         icon: '👨‍💼',
         fields: [
-            { id: 'job', label: 'Occupation', type: 'text', placeholder: 'e.g. Software Engineer' }
-        ]
+            { id: 'job', label: 'Occupation', type: 'text', placeholder: 'e.g. Software Engineer' },
+        ],
     },
     child: {
         label: 'Child',
         icon: '🧸',
         fields: [
-            { id: 'school', label: 'School / Grade', type: 'text', placeholder: 'e.g. Elementary School' },
-            { id: 'interests', label: 'Interests', type: 'text', placeholder: 'e.g. Dinosaurs, Lego' }
-        ]
+            {
+                id: 'school',
+                label: 'School / Grade',
+                type: 'text',
+                placeholder: 'e.g. Elementary School',
+            },
+            {
+                id: 'interests',
+                label: 'Interests',
+                type: 'text',
+                placeholder: 'e.g. Dinosaurs, Lego',
+            },
+        ],
     },
     pet: {
         label: 'Pet',
         icon: '🐾',
         fields: [
             { id: 'breed', label: 'Breed', type: 'text', placeholder: 'e.g. Golden Retriever' },
-            { id: 'microchip', label: 'Microchip #', type: 'text', placeholder: 'e.g. 123456789' }
-        ]
-    }
+            { id: 'microchip', label: 'Microchip #', type: 'text', placeholder: 'e.g. 123456789' },
+        ],
+    },
 };
 
 const EMOJI_OPTIONS = [
-    '👨', '👩', '👴', '👵', '👦', '👧', '👶', 
-    '🐕', '🐈', '🐹', '🐰', '🦜', '🐠', '👻',
-    '🦸', '🦹', '🧙', '🧚', '🧛', '🧜', '🧝',
-    '🤖', '👽', '👾', '🌱', '🪴', '🌲', '🌾',
-    '🌳', '🌴', '🌵','🌿', '☘️', '🍀'
+    '👨',
+    '👩',
+    '👴',
+    '👵',
+    '👦',
+    '👧',
+    '👶',
+    '🐕',
+    '🐈',
+    '🐹',
+    '🐰',
+    '🦜',
+    '🐠',
+    '👻',
+    '🦸',
+    '🦹',
+    '🧙',
+    '🧚',
+    '🧛',
+    '🧜',
+    '🧝',
+    '🤖',
+    '👽',
+    '👾',
+    '🌱',
+    '🪴',
+    '🌲',
+    '🌾',
+    '🌳',
+    '🌴',
+    '🌵',
+    '🌿',
+    '☘️',
+    '🍀',
 ];
 
 let selectedTemplate = 'adult';
@@ -543,18 +616,19 @@ function renderCards() {
     cardsGrid.innerHTML = '';
 
     if (cards.length === 0) {
-        cardsGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096; font-size: 16px;">No profiles yet. Click "Create New Card" to add your family! 👨‍👩‍👧‍👦</p>';
+        cardsGrid.innerHTML =
+            '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096; font-size: 16px;">No profiles yet. Click "Create New Card" to add your family! 👨‍👩‍👧‍👦</p>';
         return;
     }
 
-    cards.forEach(card => {
+    cards.forEach((card) => {
         const cardEl = document.createElement('div');
         // fallback to 'adult' style if type is missing (legacy support)
-        const cardType = card.type || 'adult'; 
+        const cardType = card.type || 'adult';
         cardEl.className = `family-card ${cardType}`;
 
         let fieldsHTML = '';
-        
+
         // Add Specific Fields based on type
         if (cardType === 'adult') {
             fieldsHTML += `
@@ -588,37 +662,39 @@ function renderCards() {
         }
 
         // Calculate assigned accounts metrics
-        const assignedAccounts = accounts.filter(a => a.ownerId === card.id && a.status === 'Active');
-        
+        const assignedAccounts = accounts.filter(
+            (a) => a.ownerId === card.id && a.status === 'Active'
+        );
+
         const cardMonthlySpend = assignedAccounts
-            .filter(a => a.type === 'expense' || !a.type)
+            .filter((a) => a.type === 'expense' || !a.type)
             .reduce((sum, a) => sum + (parseFloat(a.monthlyPayment) || 0), 0);
-            
+
         const cardAccountIncome = assignedAccounts
-            .filter(a => a.type === 'income')
+            .filter((a) => a.type === 'income')
             .reduce((sum, a) => sum + (parseFloat(a.monthlyPayment) || 0), 0);
 
         // Total Monthly Income only includes assigned income accounts
         const totalCardIncome = cardAccountIncome;
-        
+
         // Add Income field if present
         if (totalCardIncome > 0) {
             fieldsHTML += `
                 <div class="family-field" style="border-left: 3px solid #10b981; background: #f0fdf4;">
                     <label>Monthly Income</label>
                     <div class="value" style="color: #16a34a; font-weight: 800;">
-                        ${TIMELINE_CONFIG.currency}${totalCardIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${TIMELINE_CONFIG.currency}${totalCardIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </div>
                 </div>
             `;
         }
 
         if (cardMonthlySpend > 0) {
-           fieldsHTML += `
+            fieldsHTML += `
                 <div class="family-field" style="border-left: 3px solid #f87171; background: #fef2f2;">
                     <label>Monthly Spend</label>
                     <div class="value" style="color: #dc2626; font-weight: 800;">
-                        ${TIMELINE_CONFIG.currency}${cardMonthlySpend.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        ${TIMELINE_CONFIG.currency}${cardMonthlySpend.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </div>
                 </div>
             `;
@@ -663,32 +739,32 @@ function showCreateCardModal() {
     editingCardId = null;
     selectedTemplate = 'adult';
     selectedEmoji = '👨';
-    
+
     document.getElementById('cardModalTitle').textContent = 'Create Profile Card';
-    
+
     // Reset Template Selection UI
     renderTemplateSelector();
-    
+
     // Reset Emoji Grid
     renderEmojiGrid();
-    
+
     // Render Default Fields
     renderFormFields();
-    
+
     document.getElementById('cardModal').classList.add('active');
 }
 
 function renderTemplateSelector() {
     const container = document.getElementById('templateSelector');
-    if(!container) return;
-    
+    if (!container) return;
+
     const options = container.querySelectorAll('.template-option');
-    options.forEach(opt => {
+    options.forEach((opt) => {
         opt.classList.remove('selected');
         // Simple text match or data attribute would be better, but relying on click handlers in HTML for now
         // But to sync UI state:
         const label = opt.querySelector('.template-label').textContent.toLowerCase();
-        if(label === selectedTemplate) {
+        if (label === selectedTemplate) {
             opt.classList.add('selected');
         }
     });
@@ -696,13 +772,13 @@ function renderTemplateSelector() {
 
 function selectTemplate(type) {
     selectedTemplate = type;
-    
+
     // Update UI
     const container = document.getElementById('templateSelector');
     const options = container.querySelectorAll('.template-option');
-    options.forEach(opt => {
+    options.forEach((opt) => {
         const label = opt.querySelector('.template-label').textContent.toLowerCase();
-        if(label === type) opt.classList.add('selected');
+        if (label === type) opt.classList.add('selected');
         else opt.classList.remove('selected');
     });
 
@@ -712,11 +788,11 @@ function selectTemplate(type) {
 
 function renderEmojiGrid() {
     const grid = document.getElementById('emojiGrid');
-    if(!grid) return;
-    
+    if (!grid) return;
+
     grid.innerHTML = '';
-    
-    EMOJI_OPTIONS.forEach(emoji => {
+
+    EMOJI_OPTIONS.forEach((emoji) => {
         const el = document.createElement('div');
         el.className = `emoji-option ${emoji === selectedEmoji ? 'selected' : ''}`;
         el.textContent = emoji;
@@ -730,38 +806,38 @@ function renderEmojiGrid() {
 
 function renderFormFields() {
     const container = document.getElementById('cardForm');
-    if(!container) return;
-    
+    if (!container) return;
+
     const template = CARD_TEMPLATES[selectedTemplate];
-    
+
     // Base Fields
     let html = `
         <div class="form-group">
             <label>Display Name *</label>
-            <input type="text" id="cardDisplayName" placeholder="e.g. Dad, Fluffy" value="${editingCardId ? (document.getElementById('cardDisplayName')?.value || '') : ''}">
+            <input type="text" id="cardDisplayName" placeholder="e.g. Dad, Fluffy" value="${editingCardId ? document.getElementById('cardDisplayName')?.value || '' : ''}">
         </div>
         <div class="form-group">
             <label>Full Name *</label>
-            <input type="text" id="cardFullName" placeholder="e.g. John Doe" value="${editingCardId ? (document.getElementById('cardFullName')?.value || '') : ''}">
+            <input type="text" id="cardFullName" placeholder="e.g. John Doe" value="${editingCardId ? document.getElementById('cardFullName')?.value || '' : ''}">
         </div>
         <div class="form-group">
             <label>Date of Birth</label>
-            <input type="date" id="cardDateOfBirth" value="${editingCardId ? (document.getElementById('cardDateOfBirth')?.value || '') : ''}">
+            <input type="date" id="cardDateOfBirth" value="${editingCardId ? document.getElementById('cardDateOfBirth')?.value || '' : ''}">
         </div>
     `;
-    
+
     // Template Specific Fields
-    template.fields.forEach(field => {
+    template.fields.forEach((field) => {
         // Try to preserve value if switching back and forth or editing
         // For simplicity in create mode, we wipe. In edit mode we map.
-        let value = ''; 
-        if(editingCardId) {
-             // Logic to retrieve existing value from DOM if we are re-rendering during edit would be complex 
-             // without state object. For now we assume re-render resets these fields unless we bind them.
-             // Better approach: State-driven.
-             // Since this is a simple app, let's just clear specific fields when switching templates.
+        let value = '';
+        if (editingCardId) {
+            // Logic to retrieve existing value from DOM if we are re-rendering during edit would be complex
+            // without state object. For now we assume re-render resets these fields unless we bind them.
+            // Better approach: State-driven.
+            // Since this is a simple app, let's just clear specific fields when switching templates.
         }
-        
+
         html += `
             <div class="form-group">
                 <label>${field.label}</label>
@@ -769,7 +845,7 @@ function renderFormFields() {
             </div>
         `;
     });
-    
+
     container.innerHTML = html;
 }
 
@@ -779,7 +855,7 @@ function closeCardModal() {
 }
 
 function editCard(cardId) {
-    const card = cards.find(c => c.id === cardId);
+    const card = cards.find((c) => c.id === cardId);
     if (!card) return;
 
     editingCardId = cardId;
@@ -787,26 +863,29 @@ function editCard(cardId) {
     selectedEmoji = card.emoji || '👤';
 
     document.getElementById('cardModalTitle').textContent = 'Edit Profile Card';
-    
+
     renderTemplateSelector();
     renderEmojiGrid();
     renderFormFields(); // This renders the inputs empty first
 
     // Now populate values
     setTimeout(() => {
-        if(document.getElementById('cardDisplayName')) document.getElementById('cardDisplayName').value = card.displayName || '';
-        if(document.getElementById('cardFullName')) document.getElementById('cardFullName').value = card.fullName || '';
-        if(document.getElementById('cardDateOfBirth')) document.getElementById('cardDateOfBirth').value = card.dateOfBirth || '';
-        
+        if (document.getElementById('cardDisplayName'))
+            document.getElementById('cardDisplayName').value = card.displayName || '';
+        if (document.getElementById('cardFullName'))
+            document.getElementById('cardFullName').value = card.fullName || '';
+        if (document.getElementById('cardDateOfBirth'))
+            document.getElementById('cardDateOfBirth').value = card.dateOfBirth || '';
+
         // Populate specific fields
         const template = CARD_TEMPLATES[selectedTemplate];
-        template.fields.forEach(field => {
+        template.fields.forEach((field) => {
             const input = document.getElementById(`card_${field.id}`);
-            if(input && card[field.id]) {
+            if (input && card[field.id]) {
                 input.value = card[field.id];
             }
         });
-        
+
         document.getElementById('cardModal').classList.add('active');
     }, 0);
 }
@@ -837,7 +916,7 @@ function saveCard() {
 
     // Collect specific fields with sanitization
     const templateFields = {};
-    CARD_TEMPLATES[selectedTemplate].fields.forEach(field => {
+    CARD_TEMPLATES[selectedTemplate].fields.forEach((field) => {
         const val = document.getElementById(`card_${field.id}`)?.value;
         if (val) {
             // Sanitize based on field type
@@ -856,11 +935,11 @@ function saveCard() {
         displayName,
         fullName,
         dateOfBirth,
-        ...templateFields
+        ...templateFields,
     };
 
     if (editingCardId) {
-        const index = cards.findIndex(c => c.id === editingCardId);
+        const index = cards.findIndex((c) => c.id === editingCardId);
         if (index !== -1) {
             cards[index] = newCardData;
         }
@@ -873,9 +952,12 @@ function saveCard() {
             closeCardModal();
             renderCards();
             updateStats(); // Refresh stats in case income changed
-            notify(editingCardId ? '✅ Profile updated!' : '✅ Profile created!', NOTIFICATION_TYPES.SUCCESS);
+            notify(
+                editingCardId ? '✅ Profile updated!' : '✅ Profile created!',
+                NOTIFICATION_TYPES.SUCCESS
+            );
         })
-        .catch(err => {
+        .catch((err) => {
             console.error('Save error:', err);
             notify(MESSAGES.saveError, NOTIFICATION_TYPES.WARNING);
         });
@@ -887,24 +969,22 @@ function saveCard() {
  * @param {string} cardId - The ID of the card to delete.
  */
 function deleteCard(cardId) {
-    const card = cards.find(c => c.id === cardId);
+    const card = cards.find((c) => c.id === cardId);
     if (!card) return;
 
     if (confirm(`Delete profile for "${card.displayName}"?`)) {
-        cards = cards.filter(c => c.id !== cardId);
+        cards = cards.filter((c) => c.id !== cardId);
 
         // Disassociate assigned accounts
         let accountsUpdated = false;
-        accounts.forEach(acc => {
+        accounts.forEach((acc) => {
             if (acc.ownerId === cardId) {
                 acc.ownerId = null;
                 accountsUpdated = true;
             }
         });
 
-        const promises = [
-            saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards')
-        ];
+        const promises = [saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards')];
 
         if (accountsUpdated) {
             promises.push(saveToIndexedDB(DB_CONFIG.stores.accounts, accounts, 'allAccounts'));
@@ -915,11 +995,14 @@ function deleteCard(cardId) {
                 renderCards();
                 // Re-render accounts table if it's visible, as ownership changed (though not visible in table yet, good for consistency)
                 // If we added owner column to table, this would be crucial.
-                renderAccounts(); 
+                renderAccounts();
                 updateStats(); // Refresh stats
-                notify(`✅ Profile deleted! Assigned accounts are now unassigned.`, NOTIFICATION_TYPES.SUCCESS);
+                notify(
+                    `✅ Profile deleted! Assigned accounts are now unassigned.`,
+                    NOTIFICATION_TYPES.SUCCESS
+                );
             })
-            .catch(err => {
+            .catch((err) => {
                 notify(MESSAGES.saveError, NOTIFICATION_TYPES.WARNING);
             });
     }
@@ -928,9 +1011,19 @@ function deleteCard(cardId) {
 // ==================== ACCOUNTS MANAGEMENT ====================
 
 function createAccountRow(row) {
-    const { id, name, category, type, monthlyPayment, annualPayment, hasReminder, status, priority } = row;
+    const {
+        id,
+        name,
+        category,
+        type,
+        monthlyPayment,
+        annualPayment,
+        hasReminder,
+        status,
+        priority,
+    } = row;
     const tr = document.createElement('tr');
-    
+
     // Type handling
     const isIncome = type === 'income';
     const typeLabel = isIncome ? 'INCOME' : 'EXPENSE';
@@ -938,7 +1031,7 @@ function createAccountRow(row) {
 
     // Convert status/paid/criticality to lowecase for CSS classes
     const statusClass = `status-${status.toLowerCase()}`;
-    const paidClass = hasReminder === "Yes" ? "status-paid" : "status-unpaid";
+    const paidClass = hasReminder === 'Yes' ? 'status-paid' : 'status-unpaid';
     const criticalityClass = `criticality-${priority.toLowerCase()}`;
 
     tr.innerHTML = `
@@ -954,10 +1047,10 @@ function createAccountRow(row) {
         <td class="col-type">
             <span class="badge ${typeClass}">${typeLabel}</span>
         </td>
-        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${TIMELINE_CONFIG.currency}${monthlyPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${TIMELINE_CONFIG.currency}${annualPayment.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${TIMELINE_CONFIG.currency}${monthlyPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${TIMELINE_CONFIG.currency}${annualPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
         <td class="col-paid">
-            <span class="badge ${paidClass}">${hasReminder === "Yes" ? "PAID" : "UNPAID"}</span>
+            <span class="badge ${paidClass}">${hasReminder === 'Yes' ? 'PAID' : 'UNPAID'}</span>
         </td>
         <td class="col-status">
             <span class="badge ${statusClass}">${status}</span>
@@ -991,7 +1084,7 @@ function toggleAddForm() {
     const ownerSelect = document.getElementById('formOwner');
     if (ownerSelect) {
         ownerSelect.innerHTML = '<option value="">(Unassigned)</option>';
-        cards.forEach(c => {
+        cards.forEach((c) => {
             const opt = document.createElement('option');
             opt.value = c.id;
             opt.textContent = `${c.emoji} ${c.displayName}`;
@@ -1022,11 +1115,21 @@ function toggleAddForm() {
 }
 
 function editAccount(id) {
-    const account = accounts.find(a => a.id === id);
+    const account = accounts.find((a) => a.id === id);
     if (!account) return;
 
     editingAccountId = id;
-    const { name: service, category, type, monthlyPayment: monthlyCost, annualPayment: annualCost, hasReminder: paid, status, priority: criticality, ownerId } = account;
+    const {
+        name: service,
+        category,
+        type,
+        monthlyPayment: monthlyCost,
+        annualPayment: annualCost,
+        hasReminder: paid,
+        status,
+        priority: criticality,
+        ownerId,
+    } = account;
 
     modalTitle.textContent = `✏️ Edit Account: ${service}`;
     formService.value = service;
@@ -1050,7 +1153,7 @@ function editAccount(id) {
     const ownerSelect = document.getElementById('formOwner');
     if (ownerSelect) {
         ownerSelect.innerHTML = '<option value="">(Unassigned)</option>';
-        cards.forEach(c => {
+        cards.forEach((c) => {
             const opt = document.createElement('option');
             opt.value = c.id;
             opt.textContent = `${c.emoji} ${c.displayName}`;
@@ -1079,7 +1182,7 @@ function saveAccount() {
 
     // Sanitize service name
     const service = sanitizeInput(serviceRaw, 100);
-    
+
     // Sanitize and validate numeric inputs
     const monthlyCost = sanitizeNumber(monthlyCostRaw, 0, 1000000);
     const annualCost = sanitizeNumber(annualCostRaw, 0, 10000000);
@@ -1096,7 +1199,7 @@ function saveAccount() {
 
     if (editingAccountId !== null) {
         // Edit existing
-        const index = accounts.findIndex(a => a.id === editingAccountId);
+        const index = accounts.findIndex((a) => a.id === editingAccountId);
         if (index === -1) return;
 
         accounts[index] = {
@@ -1109,11 +1212,11 @@ function saveAccount() {
             hasReminder: paid,
             status,
             priority: criticality,
-            ownerId
+            ownerId,
         };
     } else {
         // Add new
-        const newId = Math.max(...accounts.map(a => a.id), 0) + 1;
+        const newId = Math.max(...accounts.map((a) => a.id), 0) + 1;
         accounts.push({
             id: newId,
             name: service,
@@ -1124,7 +1227,7 @@ function saveAccount() {
             hasReminder: paid,
             status,
             priority: criticality,
-            ownerId
+            ownerId,
         });
     }
 
@@ -1132,7 +1235,7 @@ function saveAccount() {
         .then(() => {
             closeAccountModal();
             renderAccounts();
-            
+
             // Also re-render profiles if on that tab to show updated numbers
             if (document.getElementById('profile').classList.contains('active')) {
                 renderCards();
@@ -1142,7 +1245,7 @@ function saveAccount() {
             initCharts();
             notify('✅ Account saved!', NOTIFICATION_TYPES.SUCCESS);
         })
-        .catch(err => {
+        .catch((err) => {
             console.error('Save error:', err);
             notify(MESSAGES.saveError, NOTIFICATION_TYPES.WARNING);
             closeAccountModal();
@@ -1152,7 +1255,7 @@ function saveAccount() {
 }
 
 function deleteAccount(id) {
-    const index = accounts.findIndex(a => a.id === id);
+    const index = accounts.findIndex((a) => a.id === id);
     if (index === -1) return;
 
     const accountName = accounts[index].name;
@@ -1166,7 +1269,7 @@ function deleteAccount(id) {
                 initCharts();
                 notify(MESSAGES.accountDeleted, NOTIFICATION_TYPES.SUCCESS);
             })
-            .catch(err => {
+            .catch((err) => {
                 console.error('Delete error:', err);
                 renderAccounts();
                 updateStats();
@@ -1190,12 +1293,15 @@ function filterAccounts() {
     const critVal = filterCriticality ? filterCriticality.value : '';
     const ownerVal = filterOwner ? filterOwner.value : '';
 
-    const filtered = accounts.filter(acc => {
+    const filtered = accounts.filter((acc) => {
         const matchCat = catVal === '' || acc.category === catVal;
         const matchType = typeVal === '' || (acc.type || 'expense') === typeVal;
         const matchStatus = statusVal === '' || acc.status === statusVal;
         const matchCrit = critVal === '' || acc.priority === critVal;
-        const matchOwner = ownerVal === '' || (acc.ownerId === ownerVal || (ownerVal === 'unassigned' && !acc.ownerId));
+        const matchOwner =
+            ownerVal === '' ||
+            acc.ownerId === ownerVal ||
+            (ownerVal === 'unassigned' && !acc.ownerId);
         return matchCat && matchType && matchStatus && matchCrit && matchOwner;
     });
 
@@ -1223,7 +1329,7 @@ function filterAccounts() {
     filtered.forEach((row) => {
         fragment.appendChild(createAccountRow(row));
     });
-    
+
     accountsBody.innerHTML = '';
     accountsBody.appendChild(fragment);
 }
@@ -1248,13 +1354,14 @@ function sortTable(column) {
         let valueB = b[column] || '';
 
         // Handle property name mapping for sorting
-        if (column === 'service') { // Should be mapped from the header data-sort attribute if it differs
-             // The column name passed in is usually the key in the object, so checking headers is key.
-             // Looking at HTML, the header for name has onclick="sortTable('name')". 
-             // Wait, looking at Step 409, the first th has: onclick="sortTable('id')".
-             // The second th has: onclick="sortTable('name')" ... wait, no.
-             // Line 197 in Step 409 says "Service Name". The th isn't fully visible.
-             // Let's assume standard keys.
+        if (column === 'service') {
+            // Should be mapped from the header data-sort attribute if it differs
+            // The column name passed in is usually the key in the object, so checking headers is key.
+            // Looking at HTML, the header for name has onclick="sortTable('name')".
+            // Wait, looking at Step 409, the first th has: onclick="sortTable('id')".
+            // The second th has: onclick="sortTable('name')" ... wait, no.
+            // Line 197 in Step 409 says "Service Name". The th isn't fully visible.
+            // Let's assume standard keys.
         }
 
         // Handle numeric/string types
@@ -1288,7 +1395,7 @@ function sortTable(column) {
 function updateStats() {
     // 1. Inventory Count (All accounts)
     const totalAccounts = accounts.length;
-    
+
     // 2. Financial Totals (Use central engine for consistency)
     const { totalIncome, totalExpense } = calculateBaseMonthlyValues();
     const netFlow = totalIncome - totalExpense;
@@ -1299,12 +1406,15 @@ function updateStats() {
     const netFlowEl = document.getElementById('statNetFlow');
 
     if (totalAccountsEl) totalAccountsEl.textContent = totalAccounts;
-    if (incomeEl) incomeEl.textContent = `${TIMELINE_CONFIG.currency}${totalIncome.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-    if (expenseEl) expenseEl.textContent = `${TIMELINE_CONFIG.currency}${totalExpense.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-    
+    if (incomeEl)
+        incomeEl.textContent = `${TIMELINE_CONFIG.currency}${totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    if (expenseEl)
+        expenseEl.textContent = `${TIMELINE_CONFIG.currency}${totalExpense.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
     if (netFlowEl) {
-        netFlowEl.textContent = `${TIMELINE_CONFIG.currency}${netFlow.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-        netFlowEl.className = 'stat-value ' + (netFlow >= 0 ? 'net-flow-positive' : 'net-flow-negative');
+        netFlowEl.textContent = `${TIMELINE_CONFIG.currency}${netFlow.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+        netFlowEl.className =
+            'stat-value ' + (netFlow >= 0 ? 'net-flow-positive' : 'net-flow-negative');
     }
 }
 
@@ -1327,10 +1437,10 @@ function destroyAllCharts() {
         costChartInstance,
         criticalityChartInstance,
         statusChartInstance,
-        cashFlowChartInstance
+        cashFlowChartInstance,
     ];
-    
-    charts.forEach(chart => {
+
+    charts.forEach((chart) => {
         if (chart) {
             try {
                 chart.destroy();
@@ -1339,7 +1449,7 @@ function destroyAllCharts() {
             }
         }
     });
-    
+
     // Reset all instances to null
     categoryChartInstance = null;
     costChartInstance = null;
@@ -1355,17 +1465,18 @@ function destroyAllCharts() {
 function initCharts() {
     // Destroy existing charts first
     destroyAllCharts();
-    
+
     // Check if Chart.js is loaded
     if (typeof Chart === 'undefined') {
         console.warn('Chart.js not loaded. Charts will not be displayed.');
         const chartContainers = document.querySelectorAll('canvas');
-        chartContainers.forEach(canvas => {
+        chartContainers.forEach((canvas) => {
             const parent = canvas.parentElement;
             if (parent && !parent.querySelector('.chart-error-msg')) {
                 const msg = document.createElement('div');
                 msg.className = 'chart-error-msg';
-                msg.innerHTML = '<p style="text-align:center; padding: 20px; color: #718096; background: #f7fafc; border-radius: 8px;">📊 Charts unavailable (Library not loaded)</p>';
+                msg.innerHTML =
+                    '<p style="text-align:center; padding: 20px; color: #718096; background: #f7fafc; border-radius: 8px;">📊 Charts unavailable (Library not loaded)</p>';
                 canvas.style.display = 'none';
                 parent.appendChild(msg);
             }
@@ -1376,27 +1487,28 @@ function initCharts() {
     // Aggregating Data
     const categoryCounts = {};
     const categoryExpenseCosts = {};
-    const criticalityCounts = { 'Critical': 0, 'Essential': 0, 'Important': 0, 'Optional': 0 };
-    const statusCounts = { 'Active': 0, 'Planned': 0, 'Dormant': 0, 'Cancelled': 0 };
-    
+    const criticalityCounts = { Critical: 0, Essential: 0, Important: 0, Optional: 0 };
+    const statusCounts = { Active: 0, Planned: 0, Dormant: 0, Cancelled: 0 };
+
     let chartAccountIncome = 0;
     let chartAccountExpense = 0;
 
-    accounts.forEach(acc => {
+    accounts.forEach((acc) => {
         const { category, monthlyPayment, status, priority, type } = acc;
         const isIncome = type === 'income';
         const isActive = status === 'Active';
-        
+
         // 1. Category Count (All accounts - Inventory mode)
         categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-        
+
         // 2. Financial Totals (Active items only - Reality mode)
         if (isActive) {
             if (isIncome) {
-                chartAccountIncome += (parseFloat(monthlyPayment) || 0);
+                chartAccountIncome += parseFloat(monthlyPayment) || 0;
             } else {
-                chartAccountExpense += (parseFloat(monthlyPayment) || 0);
-                categoryExpenseCosts[category] = (categoryExpenseCosts[category] || 0) + (parseFloat(monthlyPayment) || 0);
+                chartAccountExpense += parseFloat(monthlyPayment) || 0;
+                categoryExpenseCosts[category] =
+                    (categoryExpenseCosts[category] || 0) + (parseFloat(monthlyPayment) || 0);
             }
         }
 
@@ -1417,13 +1529,15 @@ function initCharts() {
         categoryChartInstance = new Chart(categoryCtx, {
             type: 'bar',
             data: {
-                labels: sortedCategories.map(i => i[0]),
-                datasets: [{
-                    label: 'Number of Accounts',
-                    data: sortedCategories.map(i => i[1]),
-                    backgroundColor: COLORS.chartPalette,
-                    borderRadius: 4
-                }]
+                labels: sortedCategories.map((i) => i[0]),
+                datasets: [
+                    {
+                        label: 'Number of Accounts',
+                        data: sortedCategories.map((i) => i[1]),
+                        backgroundColor: COLORS.chartPalette,
+                        borderRadius: 4,
+                    },
+                ],
             },
             options: {
                 indexAxis: 'y',
@@ -1431,16 +1545,16 @@ function initCharts() {
                 plugins: { legend: { display: false } },
                 scales: {
                     x: { beginAtZero: true, grid: { display: false } },
-                    y: { grid: { display: false } }
+                    y: { grid: { display: false } },
                 },
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const category = sortedCategories[index][0];
-                        
+
                         // Switch to accounts tab
                         switchTab('accounts');
-                        
+
                         // Reset other filters to avoid "Double Filtering"
                         if (filterType) filterType.value = '';
                         if (filterStatus) filterStatus.value = '';
@@ -1454,8 +1568,8 @@ function initCharts() {
                             notify(`🔍 Showing accounts for: ${category}`, NOTIFICATION_TYPES.INFO);
                         }
                     }
-                }
-            }
+                },
+            },
         });
     }
 
@@ -1470,13 +1584,15 @@ function initCharts() {
         costChartInstance = new Chart(costCtx, {
             type: 'bar',
             data: {
-                labels: sortedCosts.map(i => i[0]),
-                datasets: [{
-                    label: `Monthly Expense (${TIMELINE_CONFIG.currency})`,
-                    data: sortedCosts.map(i => i[1]),
-                    backgroundColor: COLORS.danger + 'bb', // Subtle red
-                    borderRadius: 4
-                }]
+                labels: sortedCosts.map((i) => i[0]),
+                datasets: [
+                    {
+                        label: `Monthly Expense (${TIMELINE_CONFIG.currency})`,
+                        data: sortedCosts.map((i) => i[1]),
+                        backgroundColor: COLORS.danger + 'bb', // Subtle red
+                        borderRadius: 4,
+                    },
+                ],
             },
             options: {
                 indexAxis: 'y',
@@ -1484,16 +1600,16 @@ function initCharts() {
                 plugins: { legend: { display: false } },
                 scales: {
                     x: { beginAtZero: true },
-                    y: { grid: { display: false } }
+                    y: { grid: { display: false } },
                 },
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const category = sortedCosts[index][0];
-                        
+
                         // Switch to accounts tab
                         switchTab('accounts');
-                        
+
                         // Reset other filters
                         if (filterType) filterType.value = '';
                         if (filterStatus) filterStatus.value = '';
@@ -1507,8 +1623,8 @@ function initCharts() {
                             notify(`🔍 Showing expenses for: ${category}`, NOTIFICATION_TYPES.INFO);
                         }
                     }
-                }
-            }
+                },
+            },
         });
     }
 
@@ -1525,22 +1641,22 @@ function initCharts() {
                         label: 'Total Income',
                         data: [totalIncome],
                         backgroundColor: COLORS.success,
-                        borderRadius: 4
+                        borderRadius: 4,
                     },
                     {
                         label: 'Total Expense',
                         data: [chartAccountExpense],
                         backgroundColor: COLORS.danger,
-                        borderRadius: 4
-                    }
-                ]
+                        borderRadius: 4,
+                    },
+                ],
             },
             options: {
                 maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true }
-                }
-            }
+                    y: { beginAtZero: true },
+                },
+            },
         });
     }
 
@@ -1552,41 +1668,44 @@ function initCharts() {
             type: 'bar',
             data: {
                 labels: Object.keys(criticalityCounts),
-                datasets: [{
-                    label: 'Count',
-                    data: Object.values(criticalityCounts),
-                    backgroundColor: [
-                        'rgba(239, 68, 68, 0.7)',  // Critical (Red)
-                        'rgba(245, 158, 11, 0.7)', // Essential (Orange)
-                        'rgba(99, 102, 241, 0.7)', // Important (Indigo)
-                        'rgba(148, 163, 184, 0.7)' // Optional (Slate)
-                    ],
-                    borderRadius: 4,
-                    barPercentage: 0.6
-                }]
+                datasets: [
+                    {
+                        label: 'Count',
+                        data: Object.values(criticalityCounts),
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)', // Critical (Red)
+                            'rgba(245, 158, 11, 0.7)', // Essential (Orange)
+                            'rgba(99, 102, 241, 0.7)', // Important (Indigo)
+                            'rgba(148, 163, 184, 0.7)', // Optional (Slate)
+                        ],
+                        borderRadius: 4,
+                        barPercentage: 0.6,
+                    },
+                ],
             },
             options: {
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { 
+                    legend: {
                         display: true,
                         position: 'top',
                         labels: {
-                            generateLabels: (chart) => chart.data.labels.map((label, i) => ({
-                                text: label,
-                                fillStyle: chart.data.datasets[0].backgroundColor[i],
-                                strokeStyle: chart.data.datasets[0].backgroundColor[i],
-                                index: i
-                            }))
-                        }
-                    }
+                            generateLabels: (chart) =>
+                                chart.data.labels.map((label, i) => ({
+                                    text: label,
+                                    fillStyle: chart.data.datasets[0].backgroundColor[i],
+                                    strokeStyle: chart.data.datasets[0].backgroundColor[i],
+                                    index: i,
+                                })),
+                        },
+                    },
                 },
                 scales: { y: { beginAtZero: true } },
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const criticality = criticalityChartInstance.data.labels[index];
-                        
+
                         // Switch to accounts tab
                         switchTab('accounts');
 
@@ -1595,16 +1714,19 @@ function initCharts() {
                         if (filterType) filterType.value = '';
                         if (filterStatus) filterStatus.value = '';
                         if (filterOwner) filterOwner.value = '';
-                        
+
                         // Apply specific filter
                         if (filterCriticality) {
                             filterCriticality.value = criticality;
                             filterAccounts();
-                            notify(`🔍 Showing accounts with criticality: ${criticality}`, NOTIFICATION_TYPES.INFO);
+                            notify(
+                                `🔍 Showing accounts with criticality: ${criticality}`,
+                                NOTIFICATION_TYPES.INFO
+                            );
                         }
                     }
-                }
-            }
+                },
+            },
         });
     }
 
@@ -1616,41 +1738,44 @@ function initCharts() {
             type: 'bar',
             data: {
                 labels: Object.keys(statusCounts),
-                datasets: [{
-                    label: 'Count',
-                    data: Object.values(statusCounts),
-                    backgroundColor: [
-                        COLORS.success, // Active
-                        COLORS.info,    // Planned
-                        COLORS.warning, // Dormant
-                        COLORS.danger   // Cancelled
-                    ],
-                    borderRadius: 4,
-                    barPercentage: 0.6
-                }]
+                datasets: [
+                    {
+                        label: 'Count',
+                        data: Object.values(statusCounts),
+                        backgroundColor: [
+                            COLORS.success, // Active
+                            COLORS.info, // Planned
+                            COLORS.warning, // Dormant
+                            COLORS.danger, // Cancelled
+                        ],
+                        borderRadius: 4,
+                        barPercentage: 0.6,
+                    },
+                ],
             },
             options: {
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { 
+                    legend: {
                         display: true,
                         position: 'top',
                         labels: {
-                            generateLabels: (chart) => chart.data.labels.map((label, i) => ({
-                                text: label,
-                                fillStyle: chart.data.datasets[0].backgroundColor[i],
-                                strokeStyle: chart.data.datasets[0].backgroundColor[i],
-                                index: i
-                            }))
-                        }
-                    }
+                            generateLabels: (chart) =>
+                                chart.data.labels.map((label, i) => ({
+                                    text: label,
+                                    fillStyle: chart.data.datasets[0].backgroundColor[i],
+                                    strokeStyle: chart.data.datasets[0].backgroundColor[i],
+                                    index: i,
+                                })),
+                        },
+                    },
                 },
                 scales: { y: { beginAtZero: true } },
                 onClick: (e, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const status = statusChartInstance.data.labels[index];
-                        
+
                         // Switch to accounts tab
                         switchTab('accounts');
 
@@ -1664,11 +1789,14 @@ function initCharts() {
                         if (filterStatus) {
                             filterStatus.value = status;
                             filterAccounts();
-                            notify(`🔍 Showing accounts with status: ${status}`, NOTIFICATION_TYPES.INFO);
+                            notify(
+                                `🔍 Showing accounts with status: ${status}`,
+                                NOTIFICATION_TYPES.INFO
+                            );
                         }
                     }
-                }
-            }
+                },
+            },
         });
     }
     updateStats();
@@ -1686,13 +1814,23 @@ function getTimelineYears() {
 function generateMonthData(years) {
     const { totalIncome, totalExpense } = calculateBaseMonthlyValues();
     const months = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
     ];
 
     let allMonths = [];
-    years.forEach(year => {
-        months.forEach(month => {
+    years.forEach((year) => {
+        months.forEach((month) => {
             allMonths.push({
                 id: `${year}-${month}`,
                 year: year,
@@ -1700,7 +1838,7 @@ function generateMonthData(years) {
                 display: `${year} - ${month}`,
                 income: parseFloat(totalIncome.toFixed(2)),
                 expenses: parseFloat(totalExpense.toFixed(2)),
-                isLocked: false
+                isLocked: false,
             });
         });
     });
@@ -1726,20 +1864,20 @@ function initializeTimelineData() {
     if (window.timelineOverrides) {
         // Merge saved months into generated structure
         if (window.timelineOverrides.months && Array.isArray(window.timelineOverrides.months)) {
-            timelineData = timelineData.map(item => {
-                const savedItem = window.timelineOverrides.months.find(m => m.id === item.id);
+            timelineData = timelineData.map((item) => {
+                const savedItem = window.timelineOverrides.months.find((m) => m.id === item.id);
                 if (savedItem) {
                     return {
                         ...item,
                         income: savedItem.income,
                         expenses: savedItem.expenses,
-                        isLocked: savedItem.isLocked || false
+                        isLocked: savedItem.isLocked || false,
                     };
                 }
                 return item;
             });
         }
-        
+
         if (window.timelineOverrides.startingBalance !== undefined) {
             currentStartingBalance = window.timelineOverrides.startingBalance;
         }
@@ -1755,7 +1893,7 @@ function initializeTimelineData() {
 
 function calculateBalances(timelineData) {
     let runningBalance = currentStartingBalance;
-    return timelineData.map(item => {
+    return timelineData.map((item) => {
         const balance = runningBalance + item.income - item.expenses;
         runningBalance = balance;
         return { ...item, balance };
@@ -1773,9 +1911,11 @@ function renderTimelineTable(timelineData) {
         const row = document.createElement('tr');
         // Unique ID for navigation (e.g. 2025-January)
         row.id = `${item.year}-${item.month}`;
-        
+
         const isNegative = item.balance < 0;
-        const balanceClass = isNegative ? 'timeline-balance negative-balance' : 'timeline-balance balance-positive';
+        const balanceClass = isNegative
+            ? 'timeline-balance negative-balance'
+            : 'timeline-balance balance-positive';
 
         // Add divider for new years
         if (item.month === 'January' && index > 0) {
@@ -1804,7 +1944,7 @@ function renderTimelineTable(timelineData) {
                     value="${item.expenses}" min="0" step="10" class="timeline-input"
                     ${item.isLocked ? 'readonly' : ''}>
             </td>
-            <td class="${balanceClass}">${TIMELINE_CONFIG.currency}${item.balance.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="${balanceClass}">${TIMELINE_CONFIG.currency}${item.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
         `;
         tbody.appendChild(row);
     });
@@ -1828,10 +1968,10 @@ function toggleMonthLock(index) {
     lockBtn.innerHTML = isLocked ? '🔒' : '🔓';
     lockBtn.title = isLocked ? 'Unlock month' : 'Lock month';
     row.classList.toggle('locked-row', isLocked);
-    
+
     // Update inputs
     const inputs = row.querySelectorAll('input');
-    inputs.forEach(input => {
+    inputs.forEach((input) => {
         if (isLocked) input.setAttribute('readonly', 'true');
         else input.removeAttribute('readonly');
     });
@@ -1858,14 +1998,16 @@ function saveTimelineData() {
     const rowsCount = inputs.length / 2;
 
     if (rowsCount !== currentData.length) {
-        console.warn("Row count mismatch during save");
+        console.warn('Row count mismatch during save');
     }
 
     for (let i = 0; i < currentData.length; i++) {
         // Find inputs for this index
         // Use querySelector to be safe with data attributes we assigned
         const incomeInput = document.querySelector(`input[data-index="${i}"][data-field="income"]`);
-        const expenseInput = document.querySelector(`input[data-index="${i}"][data-field="expenses"]`);
+        const expenseInput = document.querySelector(
+            `input[data-index="${i}"][data-field="expenses"]`
+        );
 
         if (incomeInput && expenseInput) {
             const lockBtn = incomeInput.closest('tr')?.querySelector('.lock-btn');
@@ -1879,7 +2021,7 @@ function saveTimelineData() {
 
     const dataToSave = {
         startingBalance: currentStartingBalance,
-        months: currentData
+        months: currentData,
     };
 
     saveToIndexedDB(DB_CONFIG.stores.timeline, dataToSave, 'timelineData')
@@ -1888,7 +2030,7 @@ function saveTimelineData() {
             renderTimelineTable(currentData);
             renderBalanceChart(currentData);
         })
-        .catch(err => {
+        .catch((err) => {
             console.error('Error saving timeline:', err);
             notify(MESSAGES.saveError, NOTIFICATION_TYPES.ERROR);
         });
@@ -1899,31 +2041,41 @@ function saveTimelineData() {
  * Re-calculates balances for the next 36 months.
  */
 function autoPopulateTimeline() {
-    if (confirm('This will update all UNLOCKED months with your current monthly Income and Expenses. Locked months will be preserved. Proceed?')) {
+    if (
+        confirm(
+            'This will update all UNLOCKED months with your current monthly Income and Expenses. Locked months will be preserved. Proceed?'
+        )
+    ) {
         const { totalIncome, totalExpense } = calculateBaseMonthlyValues();
-        
+
         // We need the current full timeline data to preserve locks
         // Current saveTimelineData returns the data structure.
         // Let's scrape what we have and only update non-locked ones.
-        
-        const rows = document.querySelectorAll('#timelineBody tr:not([style*="background-color: #e2e8f0"])'); // exclude year headers
+
+        const rows = document.querySelectorAll(
+            '#timelineBody tr:not([style*="background-color: #e2e8f0"])'
+        ); // exclude year headers
         const years = getTimelineYears();
         let timelineData = generateMonthData(years); // Get structure
 
         // Load existing status from window.timelineOverrides if available, or scrape DOM
         // The most reliable is to map against window.timelineOverrides or what we are currently showing.
-        
+
         const inputs = document.querySelectorAll('.timeline-input');
         const rowsCount = inputs.length / 2;
 
         for (let i = 0; i < rowsCount; i++) {
-            const incomeInput = document.querySelector(`input[data-index="${i}"][data-field="income"]`);
+            const incomeInput = document.querySelector(
+                `input[data-index="${i}"][data-field="income"]`
+            );
             const lockBtn = incomeInput?.closest('tr')?.querySelector('.lock-btn');
             const isLocked = lockBtn?.classList.contains('locked') || false;
 
             if (isLocked) {
                 // Keep existing values
-                const expenseInput = document.querySelector(`input[data-index="${i}"][data-field="expenses"]`);
+                const expenseInput = document.querySelector(
+                    `input[data-index="${i}"][data-field="expenses"]`
+                );
                 timelineData[i].income = parseFloat(incomeInput.value) || 0;
                 timelineData[i].expenses = parseFloat(expenseInput.value) || 0;
                 timelineData[i].isLocked = true;
@@ -1936,7 +2088,7 @@ function autoPopulateTimeline() {
         }
 
         renderTimelineTable(timelineData);
-        saveTimelineData(); 
+        saveTimelineData();
         notify('✅ Timeline refreshed! (Locked months preserved)', NOTIFICATION_TYPES.SUCCESS);
     }
 }
@@ -1950,10 +2102,11 @@ function renderBalanceChart(timelineData) {
     if (typeof Chart === 'undefined') {
         ctx.style.display = 'none';
         const parent = ctx.parentElement;
-         if(parent && !parent.querySelector('.chart-error-msg')) {
+        if (parent && !parent.querySelector('.chart-error-msg')) {
             const msg = document.createElement('div');
             msg.className = 'chart-error-msg';
-            msg.innerHTML = '<p style="text-align:center; padding: 20px; color: #718096; background: #f7fafc; border-radius: 8px;">📈 Timeline Chart unavailable</p>';
+            msg.innerHTML =
+                '<p style="text-align:center; padding: 20px; color: #718096; background: #f7fafc; border-radius: 8px;">📈 Timeline Chart unavailable</p>';
             parent.appendChild(msg);
         }
         return;
@@ -1966,18 +2119,20 @@ function renderBalanceChart(timelineData) {
     window.balanceChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: withBalances.map(m => m.display),
-            datasets: [{
-                label: `Projected Balance (${TIMELINE_CONFIG.currency})`,
-                data: withBalances.map(m => m.balance),
-                borderColor: '#6366f1',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 2, // Smaller points for dense data
-                pointBackgroundColor: '#6366f1'
-            }]
+            labels: withBalances.map((m) => m.display),
+            datasets: [
+                {
+                    label: `Projected Balance (${TIMELINE_CONFIG.currency})`,
+                    data: withBalances.map((m) => m.balance),
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2, // Smaller points for dense data
+                    pointBackgroundColor: '#6366f1',
+                },
+            ],
         },
         options: {
             responsive: true,
@@ -1988,22 +2143,22 @@ function renderBalanceChart(timelineData) {
                     callbacks: {
                         label: function (context) {
                             return `Balance: ${TIMELINE_CONFIG.currency}${context.parsed.y.toFixed(2)}`;
-                        }
-                    }
-                }
+                        },
+                    },
+                },
             },
             scales: {
                 y: {
                     beginAtZero: false,
-                    title: { display: true, text: `Balance (${TIMELINE_CONFIG.currency})` }
+                    title: { display: true, text: `Balance (${TIMELINE_CONFIG.currency})` },
                 },
                 x: {
                     ticks: {
-                        maxTicksLimit: 12 // Limit X-axis labels to avoid clutter
-                    }
-                }
-            }
-        }
+                        maxTicksLimit: 12, // Limit X-axis labels to avoid clutter
+                    },
+                },
+            },
+        },
     });
 }
 
@@ -2026,10 +2181,11 @@ function syncSettingsUI() {
     if (currencyInput) currencyInput.value = appSettings.currency;
     if (timeoutInput) timeoutInput.value = appSettings.heartbeatTimeout;
     if (autoShutdownInput) autoShutdownInput.checked = appSettings.autoShutdown;
-    
+
     if (timeoutDisplay) {
         const val = appSettings.heartbeatTimeout;
-        timeoutDisplay.textContent = val >= 60 ? `${Math.floor(val/60)}m ${val%60}s` : `${val}s`;
+        timeoutDisplay.textContent =
+            val >= 60 ? `${Math.floor(val / 60)}m ${val % 60}s` : `${val}s`;
     }
 
     // Add event listeners if not already added
@@ -2040,7 +2196,7 @@ function syncSettingsUI() {
             applySettings();
             saveSettings();
         });
-        
+
         if (darkModeInput) {
             darkModeInput.addEventListener('change', (e) => {
                 appSettings.theme = e.target.checked ? 'dark' : 'light';
@@ -2048,23 +2204,27 @@ function syncSettingsUI() {
                 saveSettings();
             });
         }
-        
+
         if (currencyInput) {
             currencyInput.addEventListener('change', (e) => {
                 appSettings.currency = e.target.value;
                 TIMELINE_CONFIG.currency = e.target.value;
                 saveSettings();
-                notify(`Currency updated to ${e.target.value}. Please refresh or switch tabs to see all changes.`, NOTIFICATION_TYPES.SUCCESS);
+                notify(
+                    `Currency updated to ${e.target.value}. Please refresh or switch tabs to see all changes.`,
+                    NOTIFICATION_TYPES.SUCCESS
+                );
             });
         }
-        
+
         if (timeoutInput) {
             timeoutInput.addEventListener('input', (e) => {
                 appSettings.heartbeatTimeout = parseInt(e.target.value);
                 const val = appSettings.heartbeatTimeout;
-                timeoutDisplay.textContent = val >= 60 ? `${Math.floor(val/60)}m ${val%60}s` : `${val}s`;
+                timeoutDisplay.textContent =
+                    val >= 60 ? `${Math.floor(val / 60)}m ${val % 60}s` : `${val}s`;
             });
-            
+
             timeoutInput.addEventListener('change', () => {
                 applySettings();
                 saveSettings();
@@ -2087,9 +2247,11 @@ function renderMetadataManagers() {
     const renderList = (type, containerId) => {
         const container = document.getElementById(containerId);
         if (!container) return;
-        
+
         const items = appSettings[type] || [];
-        container.innerHTML = items.map((item, index) => `
+        container.innerHTML = items
+            .map(
+                (item, index) => `
             <div class="metadata-item">
                 <span>${item}</span>
                 <div class="metadata-item-actions">
@@ -2097,7 +2259,9 @@ function renderMetadataManagers() {
                     <button class="btn-tiny delete" onclick="deleteMetadataItem('${type}', ${index})">🗑️</button>
                 </div>
             </div>
-        `).join('');
+        `
+            )
+            .join('');
 
         // Also update any dropdowns that need this data immediately
         if (type === 'categories') {
@@ -2105,44 +2269,49 @@ function renderMetadataManagers() {
             const formSelect = document.getElementById('formCategory');
             if (formSelect) {
                 const currentVal = formSelect.value;
-                formSelect.innerHTML = '<option value="">Select Category</option>' + 
-                    items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                formSelect.innerHTML =
+                    '<option value="">Select Category</option>' +
+                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
                 formSelect.value = currentVal;
             }
             // Update Filter Dropdown
             const filterSelect = document.getElementById('filterCategory');
             if (filterSelect) {
                 const currentVal = filterSelect.value;
-                filterSelect.innerHTML = '<option value="">All</option>' + 
-                    items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+                filterSelect.innerHTML =
+                    '<option value="">All</option>' +
+                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
                 filterSelect.value = currentVal;
             }
         } else if (type === 'statuses') {
-             // Update Form Dropdown
-             const formSelect = document.getElementById('formStatus');
-             if (formSelect) {
-                 const currentVal = formSelect.value;
-                 formSelect.innerHTML = '<option value="">Select Status</option>' + 
-                     items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                 formSelect.value = currentVal;
-             }
-             // Update Filter Dropdown
-             const filterSelect = document.getElementById('filterStatus');
-             if (filterSelect) {
-                 const currentVal = filterSelect.value;
-                 filterSelect.innerHTML = '<option value="">All</option>' + 
-                     items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                 filterSelect.value = currentVal;
-             }
+            // Update Form Dropdown
+            const formSelect = document.getElementById('formStatus');
+            if (formSelect) {
+                const currentVal = formSelect.value;
+                formSelect.innerHTML =
+                    '<option value="">Select Status</option>' +
+                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
+                formSelect.value = currentVal;
+            }
+            // Update Filter Dropdown
+            const filterSelect = document.getElementById('filterStatus');
+            if (filterSelect) {
+                const currentVal = filterSelect.value;
+                filterSelect.innerHTML =
+                    '<option value="">All</option>' +
+                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
+                filterSelect.value = currentVal;
+            }
         } else if (type === 'criticalities') {
-             // Update Form Dropdown
-             const formSelect = document.getElementById('formCriticality');
-             if (formSelect) {
-                 const currentVal = formSelect.value;
-                 formSelect.innerHTML = '<option value="">Select Level</option>' + 
-                     items.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-                 formSelect.value = currentVal;
-             }
+            // Update Form Dropdown
+            const formSelect = document.getElementById('formCriticality');
+            if (formSelect) {
+                const currentVal = formSelect.value;
+                formSelect.innerHTML =
+                    '<option value="">Select Level</option>' +
+                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
+                formSelect.value = currentVal;
+            }
         }
     };
 
@@ -2152,14 +2321,18 @@ function renderMetadataManagers() {
 }
 
 function addMetadataItem(type) {
-    const inputId = type === 'categories' ? 'newCategoryInput' : 
-                   type === 'statuses' ? 'newStatusInput' : 'newCriticalityInput';
+    const inputId =
+        type === 'categories'
+            ? 'newCategoryInput'
+            : type === 'statuses'
+              ? 'newStatusInput'
+              : 'newCriticalityInput';
     const input = document.getElementById(inputId);
     const value = input?.value.trim();
 
     if (!value) return;
     if (!appSettings[type]) appSettings[type] = [];
-    
+
     if (appSettings[type].includes(value)) {
         notify('This item already exists', NOTIFICATION_TYPES.WARNING);
         return;
@@ -2167,7 +2340,7 @@ function addMetadataItem(type) {
 
     appSettings[type].push(value);
     input.value = '';
-    
+
     renderMetadataManagers();
     saveSettings();
     notify('✅ Item added', NOTIFICATION_TYPES.SUCCESS);
@@ -2186,7 +2359,7 @@ function deleteMetadataItem(type, index) {
 function editMetadataItem(type, index) {
     const oldVal = appSettings[type][index];
     const newVal = prompt(`Edit ${type.slice(0, -1)}:`, oldVal);
-    
+
     if (newVal && newVal.trim() !== '' && newVal !== oldVal) {
         appSettings[type][index] = newVal.trim();
         renderMetadataManagers();
@@ -2202,25 +2375,30 @@ function populateAccountFormDropdowns() {
 
     if (catSelect) {
         const current = catSelect.value;
-        catSelect.innerHTML = '<option value="">Select Category</option>' + 
-            (appSettings.categories || []).map(c => `<option value="${c}">${c}</option>`).join('');
+        catSelect.innerHTML =
+            '<option value="">Select Category</option>' +
+            (appSettings.categories || [])
+                .map((c) => `<option value="${c}">${c}</option>`)
+                .join('');
         catSelect.value = current;
     }
     if (statusSelect) {
         const current = statusSelect.value;
-        statusSelect.innerHTML = '<option value="">Select Status</option>' + 
-            (appSettings.statuses || []).map(s => `<option value="${s}">${s}</option>`).join('');
+        statusSelect.innerHTML =
+            '<option value="">Select Status</option>' +
+            (appSettings.statuses || []).map((s) => `<option value="${s}">${s}</option>`).join('');
         statusSelect.value = current;
     }
     if (critSelect) {
         const current = critSelect.value;
-        critSelect.innerHTML = '<option value="">Select Level</option>' + 
-            (appSettings.criticalities || []).map(c => `<option value="${c}">${c}</option>`).join('');
+        critSelect.innerHTML =
+            '<option value="">Select Level</option>' +
+            (appSettings.criticalities || [])
+                .map((c) => `<option value="${c}">${c}</option>`)
+                .join('');
         critSelect.value = current;
     }
 }
-
-
 
 function populateTemplateDropdown() {
     const presetSelect = document.getElementById('formPreset');
@@ -2230,7 +2408,7 @@ function populateTemplateDropdown() {
 
     // Keep the first default option
     presetSelect.innerHTML = '<option value="">Select a preset...</option>';
-    
+
     ACCOUNT_TEMPLATES.forEach((tpl, index) => {
         const opt = document.createElement('option');
         opt.value = index;
@@ -2250,25 +2428,28 @@ function applyPreset() {
     // Auto-fill fields
     if (formService) formService.value = tpl.name;
     if (formType) formType.value = tpl.type;
-    
+
     // Handle Category - check if exists, if not default to 'Other' or add it?
     // Let's try to match it.
     if (formCategory) {
         // We need to check if the category exists in the dropdown (which comes from appSettings)
-        const options = Array.from(formCategory.options).map(o => o.value);
+        const options = Array.from(formCategory.options).map((o) => o.value);
         if (options.includes(tpl.category)) {
             formCategory.value = tpl.category;
         } else {
             // If template category is missing from user settings, default to 'Other' or first option
             // Or better: auto-add it to temporary state? No, stick to existing list.
-            formCategory.value = 'Other'; 
-            notify(`Category "${tpl.category}" not found in your list. Defaulted to "Other".`, NOTIFICATION_TYPES.INFO);
+            formCategory.value = 'Other';
+            notify(
+                `Category "${tpl.category}" not found in your list. Defaulted to "Other".`,
+                NOTIFICATION_TYPES.INFO
+            );
         }
     }
 
     if (formCriticality) {
         // Similar check for priority
-        const options = Array.from(formCriticality.options).map(o => o.value);
+        const options = Array.from(formCriticality.options).map((o) => o.value);
         if (options.includes(tpl.priority)) {
             formCriticality.value = tpl.priority;
         }
@@ -2289,7 +2470,7 @@ function applySettings() {
 
     // 2. Apply Primary Color
     document.documentElement.style.setProperty('--color-primary', appSettings.primaryColor);
-    
+
     // 3. Update Timeline Currency (in-memory)
     TIMELINE_CONFIG.currency = appSettings.currency;
 
@@ -2303,9 +2484,9 @@ function applySettings() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             timeout: appSettings.heartbeatTimeout,
-            enabled: appSettings.autoShutdown
-        })
-    }).catch(err => console.error('Failed to sync system settings:', err));
+            enabled: appSettings.autoShutdown,
+        }),
+    }).catch((err) => console.error('Failed to sync system settings:', err));
 }
 
 async function saveSettings() {
@@ -2320,8 +2501,8 @@ async function saveSettings() {
 
 function exportData() {
     fetch(API_URL)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -2331,7 +2512,7 @@ function exportData() {
             URL.revokeObjectURL(url);
             notify('✅ Backup exported successfully!', NOTIFICATION_TYPES.SUCCESS);
         })
-        .catch(err => notify('❌ Export failed', NOTIFICATION_TYPES.ERROR));
+        .catch((err) => notify('❌ Export failed', NOTIFICATION_TYPES.ERROR));
 }
 
 function importData(event) {
@@ -2339,16 +2520,16 @@ function importData(event) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         try {
             const data = JSON.parse(e.target.result);
             // Quick validation
             if (!data.accounts || !data.profile) throw new Error('Invalid backup format');
-            
+
             // Overwrite server data
             const stores = Object.keys(data);
-            const promises = stores.map(store => saveToIndexedDB(store, data[store]));
-            
+            const promises = stores.map((store) => saveToIndexedDB(store, data[store]));
+
             Promise.all(promises).then(() => {
                 notify('✅ Data imported! Reloading...', NOTIFICATION_TYPES.SUCCESS);
                 setTimeout(() => location.reload(), 1500);
@@ -2372,131 +2553,435 @@ function closeResetModal() {
 
 function confirmFactoryReset() {
     const includeSeed = document.getElementById('includeSeedData').checked;
-    
-// Default empty state
-const emptyData = {
-    profile: { cards: [] },
-    timeline: { months: [], startingBalance: 0 },
-    settings: DEFAULT_SETTINGS
-};
 
-const accountsToSave = includeSeed ? convertAccountsToObjects(SEED_DATA) : [];
+    // Default empty state
+    const emptyData = {
+        profile: { cards: [] },
+        timeline: { months: [], startingBalance: 0 },
+        settings: DEFAULT_SETTINGS,
+    };
 
-// Load seed cards if includeSeed is checked
-const cardsToSave = includeSeed ? [
-    {
-        id: "card_1769082468127",
-        type: "adult",
-        emoji: "👨",
-        displayName: "Dad",
-        fullName: "Abir",
-        dateOfBirth: "1990-09-26",
-        job: "Software Consultant and Technical Support Specialist"
-    },
-    {
-        id: "card_1769082534972",
-        type: "pet",
-        emoji: "🐕",
-        displayName: "Dog",
-        fullName: "Nuka",
-        dateOfBirth: "2023-03-01",
-        breed: "German Shepherd/Border Collie"
-    }
-] : [];
+    const accountsToSave = includeSeed ? convertAccountsToObjects(SEED_DATA) : [];
 
-// Load seed timeline if includeSeed is checked
-const timelineToSave = includeSeed ? {
-    startingBalance: 100,
-    months: [
-        { id: "2025-January", year: 2025, month: "January", display: "2025 - January", income: 1800, expenses: 2000, isLocked: false },
-        { id: "2025-February", year: 2025, month: "February", display: "2025 - February", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-March", year: 2025, month: "March", display: "2025 - March", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-April", year: 2025, month: "April", display: "2025 - April", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-May", year: 2025, month: "May", display: "2025 - May", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-June", year: 2025, month: "June", display: "2025 - June", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-July", year: 2025, month: "July", display: "2025 - July", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-August", year: 2025, month: "August", display: "2025 - August", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-September", year: 2025, month: "September", display: "2025 - September", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-October", year: 2025, month: "October", display: "2025 - October", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-November", year: 2025, month: "November", display: "2025 - November", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2025-December", year: 2025, month: "December", display: "2025 - December", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-January", year: 2026, month: "January", display: "2026 - January", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-February", year: 2026, month: "February", display: "2026 - February", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-March", year: 2026, month: "March", display: "2026 - March", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-April", year: 2026, month: "April", display: "2026 - April", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-May", year: 2026, month: "May", display: "2026 - May", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-June", year: 2026, month: "June", display: "2026 - June", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-July", year: 2026, month: "July", display: "2026 - July", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-August", year: 2026, month: "August", display: "2026 - August", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-September", year: 2026, month: "September", display: "2026 - September", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-October", year: 2026, month: "October", display: "2026 - October", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-November", year: 2026, month: "November", display: "2026 - November", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2026-December", year: 2026, month: "December", display: "2026 - December", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2027-January", year: 2027, month: "January", display: "2027 - January", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2027-February", year: 2027, month: "February", display: "2027 - February", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2027-March", year: 2027, month: "March", display: "2027 - March", income: 1800, expenses: 1500, isLocked: false },
-        { id: "2027-April", year: 2027, month: "April", display: "2027 - April", income: 1700, expenses: 1140, isLocked: false },
-        { id: "2027-May", year: 2027, month: "May", display: "2027 - May", income: 1700, expenses: 1140, isLocked: false },
-        { id: "2027-June", year: 2027, month: "June", display: "2027 - June", income: 1700, expenses: 1140, isLocked: false },
-        { id: "2027-July", year: 2027, month: "July", display: "2027 - July", income: 1700, expenses: 1140, isLocked: false },
-        { id: "2027-August", year: 2027, month: "August", display: "2027 - August", income: 1700, expenses: 1140, isLocked: false },
-        { id: "2027-September", year: 2027, month: "September", display: "2027 - September", income: 1700, expenses: 1140, isLocked: false },
-        { id: "2027-October", year: 2027, month: "October", display: "2027 - October", income: 1700, expenses: 1140, isLocked: false },
-        { id: "2027-November", year: 2027, month: "November", display: "2027 - November", income: 1700, expenses: 1140, isLocked: false },
-        { id: "2027-December", year: 2027, month: "December", display: "2027 - December", income: 1700, expenses: 1140, isLocked: false }
-    ]
-} : { months: [], startingBalance: 0 };
+    // Load seed cards if includeSeed is checked
+    const cardsToSave = includeSeed
+        ? [
+              {
+                  id: 'card_1769082468127',
+                  type: 'adult',
+                  emoji: '👨',
+                  displayName: 'Dad',
+                  fullName: 'Abir',
+                  dateOfBirth: '1990-09-26',
+                  job: 'Software Consultant and Technical Support Specialist',
+              },
+              {
+                  id: 'card_1769082534972',
+                  type: 'pet',
+                  emoji: '🐕',
+                  displayName: 'Dog',
+                  fullName: 'Nuka',
+                  dateOfBirth: '2023-03-01',
+                  breed: 'German Shepherd/Border Collie',
+              },
+          ]
+        : [];
 
-Promise.all([
-    saveToIndexedDB(DB_CONFIG.stores.accounts, accountsToSave, 'allAccounts'),
-    saveToIndexedDB(DB_CONFIG.stores.profile, cardsToSave, 'cards'),
-    saveToIndexedDB(DB_CONFIG.stores.timeline, timelineToSave, 'timelineData'),
-    saveToIndexedDB(DB_CONFIG.stores.goals, [], 'goals'),
-    saveToIndexedDB(DB_CONFIG.stores.settings, DEFAULT_SETTINGS, 'appSettings')
-]).then(() => {
-    notify('✅ Factory reset complete! Reloading...', NOTIFICATION_TYPES.SUCCESS);
-    setTimeout(() => location.reload(), 1500);
-});
+    // Load seed timeline if includeSeed is checked
+    const timelineToSave = includeSeed
+        ? {
+              startingBalance: 100,
+              months: [
+                  {
+                      id: '2025-January',
+                      year: 2025,
+                      month: 'January',
+                      display: '2025 - January',
+                      income: 1800,
+                      expenses: 2000,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-February',
+                      year: 2025,
+                      month: 'February',
+                      display: '2025 - February',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-March',
+                      year: 2025,
+                      month: 'March',
+                      display: '2025 - March',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-April',
+                      year: 2025,
+                      month: 'April',
+                      display: '2025 - April',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-May',
+                      year: 2025,
+                      month: 'May',
+                      display: '2025 - May',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-June',
+                      year: 2025,
+                      month: 'June',
+                      display: '2025 - June',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-July',
+                      year: 2025,
+                      month: 'July',
+                      display: '2025 - July',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-August',
+                      year: 2025,
+                      month: 'August',
+                      display: '2025 - August',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-September',
+                      year: 2025,
+                      month: 'September',
+                      display: '2025 - September',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-October',
+                      year: 2025,
+                      month: 'October',
+                      display: '2025 - October',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-November',
+                      year: 2025,
+                      month: 'November',
+                      display: '2025 - November',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2025-December',
+                      year: 2025,
+                      month: 'December',
+                      display: '2025 - December',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-January',
+                      year: 2026,
+                      month: 'January',
+                      display: '2026 - January',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-February',
+                      year: 2026,
+                      month: 'February',
+                      display: '2026 - February',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-March',
+                      year: 2026,
+                      month: 'March',
+                      display: '2026 - March',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-April',
+                      year: 2026,
+                      month: 'April',
+                      display: '2026 - April',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-May',
+                      year: 2026,
+                      month: 'May',
+                      display: '2026 - May',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-June',
+                      year: 2026,
+                      month: 'June',
+                      display: '2026 - June',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-July',
+                      year: 2026,
+                      month: 'July',
+                      display: '2026 - July',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-August',
+                      year: 2026,
+                      month: 'August',
+                      display: '2026 - August',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-September',
+                      year: 2026,
+                      month: 'September',
+                      display: '2026 - September',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-October',
+                      year: 2026,
+                      month: 'October',
+                      display: '2026 - October',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-November',
+                      year: 2026,
+                      month: 'November',
+                      display: '2026 - November',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2026-December',
+                      year: 2026,
+                      month: 'December',
+                      display: '2026 - December',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-January',
+                      year: 2027,
+                      month: 'January',
+                      display: '2027 - January',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-February',
+                      year: 2027,
+                      month: 'February',
+                      display: '2027 - February',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-March',
+                      year: 2027,
+                      month: 'March',
+                      display: '2027 - March',
+                      income: 1800,
+                      expenses: 1500,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-April',
+                      year: 2027,
+                      month: 'April',
+                      display: '2027 - April',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-May',
+                      year: 2027,
+                      month: 'May',
+                      display: '2027 - May',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-June',
+                      year: 2027,
+                      month: 'June',
+                      display: '2027 - June',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-July',
+                      year: 2027,
+                      month: 'July',
+                      display: '2027 - July',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-August',
+                      year: 2027,
+                      month: 'August',
+                      display: '2027 - August',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-September',
+                      year: 2027,
+                      month: 'September',
+                      display: '2027 - September',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-October',
+                      year: 2027,
+                      month: 'October',
+                      display: '2027 - October',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-November',
+                      year: 2027,
+                      month: 'November',
+                      display: '2027 - November',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+                  {
+                      id: '2027-December',
+                      year: 2027,
+                      month: 'December',
+                      display: '2027 - December',
+                      income: 1700,
+                      expenses: 1140,
+                      isLocked: false,
+                  },
+              ],
+          }
+        : { months: [], startingBalance: 0 };
+
+    Promise.all([
+        saveToIndexedDB(DB_CONFIG.stores.accounts, accountsToSave, 'allAccounts'),
+        saveToIndexedDB(DB_CONFIG.stores.profile, cardsToSave, 'cards'),
+        saveToIndexedDB(DB_CONFIG.stores.timeline, timelineToSave, 'timelineData'),
+        saveToIndexedDB(DB_CONFIG.stores.goals, [], 'goals'),
+        saveToIndexedDB(DB_CONFIG.stores.settings, DEFAULT_SETTINGS, 'appSettings'),
+    ]).then(() => {
+        notify('✅ Factory reset complete! Reloading...', NOTIFICATION_TYPES.SUCCESS);
+        setTimeout(() => location.reload(), 1500);
+    });
 }
 const SEED_DATA = [
-    [1, "Primary Salary", "Productivity & Work", "income", 3500, 0, "No", "Active", "Critical"],
-    [2, "Google Gemini", "AI Tools", "expense", 0, 0, "No", "Active", "Optional"],
-    [3, "Rent", "Household & Home", "expense", 1200, 0, "Yes", "Active", "Critical"],
-    [4, "ChatGPT", "AI Tools", "expense", 20, 0, "No", "Active", "Optional"],
-    [5, "Naturstrom", "Utilities & Bills", "expense", 45, 0, "Yes", "Active", "Important"],
-    [6, "Groceries", "Food & Dining", "expense", 400, 0, "Yes", "Active", "Critical"]
+    [1, 'Primary Salary', 'Productivity & Work', 'income', 3500, 0, 'No', 'Active', 'Critical'],
+    [2, 'Google Gemini', 'AI Tools', 'expense', 0, 0, 'No', 'Active', 'Optional'],
+    [3, 'Rent', 'Household & Home', 'expense', 1200, 0, 'Yes', 'Active', 'Critical'],
+    [4, 'ChatGPT', 'AI Tools', 'expense', 20, 0, 'No', 'Active', 'Optional'],
+    [5, 'Naturstrom', 'Utilities & Bills', 'expense', 45, 0, 'Yes', 'Active', 'Important'],
+    [6, 'Groceries', 'Food & Dining', 'expense', 400, 0, 'Yes', 'Active', 'Critical'],
 ];
 
 function downloadCSV() {
-    const headers = ['ID', 'Service', 'Category', 'Type', 'MonthlyAmount', 'AnnualAmount', 'Status', 'Criticality', 'AssignedTo'];
-    const rows = accounts.map(a => {
+    const headers = [
+        'ID',
+        'Service',
+        'Category',
+        'Type',
+        'MonthlyAmount',
+        'AnnualAmount',
+        'Status',
+        'Criticality',
+        'AssignedTo',
+    ];
+    const rows = accounts.map((a) => {
         let ownerName = 'Unassigned';
         if (a.ownerId) {
-            const owner = cards.find(c => c.id === a.ownerId);
+            const owner = cards.find((c) => c.id === a.ownerId);
             if (owner) ownerName = owner.displayName;
         }
-        
+
         return [
-            a.id, 
-            `"${a.name}"`, 
-            `"${a.category}"`, 
+            a.id,
+            `"${a.name}"`,
+            `"${a.category}"`,
             `"${a.type || 'expense'}"`,
-            a.monthlyPayment, 
-            a.annualPayment, 
-            a.status, 
+            a.monthlyPayment,
+            a.annualPayment,
+            a.status,
             a.priority,
-            `"${ownerName}"`
+            `"${ownerName}"`,
         ];
     });
-    
-    let csvContent = "data:text/csv;charset=utf-8," 
-        + headers.join(",") + "\n"
-        + rows.map(r => r.join(",")).join("\n");
+
+    let csvContent =
+        'data:text/csv;charset=utf-8,' +
+        headers.join(',') +
+        '\n' +
+        rows.map((r) => r.join(',')).join('\n');
 
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "balance_report.csv");
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'balance_report.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -2507,11 +2992,12 @@ function downloadCSV() {
 function renderGoals() {
     const goalsList = document.getElementById('goalsList');
     if (!goalsList) return;
-    
+
     goalsList.innerHTML = '';
 
     if (goals.length === 0) {
-        goalsList.innerHTML = '<p style="text-align:center; padding: 20px; color: #718096;">No goals set yet. Start dreaming! 🚀</p>';
+        goalsList.innerHTML =
+            '<p style="text-align:center; padding: 20px; color: #718096;">No goals set yet. Start dreaming! 🚀</p>';
         return;
     }
 
@@ -2519,10 +3005,11 @@ function renderGoals() {
     const { totalIncome, totalExpense } = calculateBaseMonthlyValues();
     const netFlow = totalIncome - totalExpense;
 
-    goals.forEach(goal => {
+    goals.forEach((goal) => {
         const percentage = Math.min(100, Math.max(0, (goal.current / goal.target) * 100));
-        const colorClass = percentage >= 100 ? 'status-paid' : (percentage >= 50 ? 'type-income' : 'type-expense');
-        
+        const colorClass =
+            percentage >= 100 ? 'status-paid' : percentage >= 50 ? 'type-income' : 'type-expense';
+
         // Calculate ETA
         let etaText = '';
         if (percentage >= 100) {
@@ -2571,16 +3058,16 @@ function addGoal() {
     const nameInput = document.getElementById('goalName');
     const targetInput = document.getElementById('goalTarget');
     const currentInput = document.getElementById('goalCurrent');
-    
+
     if (nameInput) nameInput.value = '';
     if (targetInput) targetInput.value = '';
     if (currentInput) currentInput.value = '0';
-    
+
     if (modal) modal.classList.add('active');
 }
 
 function editGoal(id) {
-    const goal = goals.find(g => g.id === id);
+    const goal = goals.find((g) => g.id === id);
     if (!goal) return;
 
     editingGoalId = id;
@@ -2588,7 +3075,7 @@ function editGoal(id) {
     document.getElementById('goalName').value = goal.name;
     document.getElementById('goalTarget').value = goal.target;
     document.getElementById('goalCurrent').value = goal.current;
-    
+
     if (modal) modal.classList.add('active');
 }
 
@@ -2618,7 +3105,7 @@ function saveGoal() {
     }
 
     if (editingGoalId) {
-        const index = goals.findIndex(g => g.id === editingGoalId);
+        const index = goals.findIndex((g) => g.id === editingGoalId);
         if (index !== -1) {
             goals[index] = { ...goals[index], name, target, current };
         }
@@ -2628,26 +3115,24 @@ function saveGoal() {
             name,
             target,
             current,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
         });
     }
 
-    saveToIndexedDB(DB_CONFIG.stores.goals, goals, 'goals')
-        .then(() => {
-            closeGoalModal();
-            renderGoals();
-            notify('✅ Goal saved successfully!', NOTIFICATION_TYPES.SUCCESS);
-        });
+    saveToIndexedDB(DB_CONFIG.stores.goals, goals, 'goals').then(() => {
+        closeGoalModal();
+        renderGoals();
+        notify('✅ Goal saved successfully!', NOTIFICATION_TYPES.SUCCESS);
+    });
 }
 
 function deleteGoal(id) {
     if (confirm('Delete this financial goal?')) {
-        goals = goals.filter(g => g.id !== id);
-        saveToIndexedDB(DB_CONFIG.stores.goals, goals, 'goals')
-            .then(() => {
-                renderGoals();
-                notify('🗑️ Goal deleted.', NOTIFICATION_TYPES.SUCCESS);
-            });
+        goals = goals.filter((g) => g.id !== id);
+        saveToIndexedDB(DB_CONFIG.stores.goals, goals, 'goals').then(() => {
+            renderGoals();
+            notify('🗑️ Goal deleted.', NOTIFICATION_TYPES.SUCCESS);
+        });
     }
 }
 
@@ -2696,8 +3181,24 @@ initIndexedDB()
             } else {
                 // Load defaults if empty (First run only)
                 cards = [
-                    { id: "card_1769082468127", type: "adult", emoji: "👨", displayName: "Dad", fullName: "Abir", dateOfBirth: "1990-09-26", job: "Software Consultant and Technical Support Specialist" },
-                    { id: "card_1769082534972", type: "pet", emoji: "🐕", displayName: "Dog", fullName: "Nuka", dateOfBirth: "2023-03-01", breed: "German Shepherd/Border Collie" }
+                    {
+                        id: 'card_1769082468127',
+                        type: 'adult',
+                        emoji: '👨',
+                        displayName: 'Dad',
+                        fullName: 'Abir',
+                        dateOfBirth: '1990-09-26',
+                        job: 'Software Consultant and Technical Support Specialist',
+                    },
+                    {
+                        id: 'card_1769082534972',
+                        type: 'pet',
+                        emoji: '🐕',
+                        displayName: 'Dog',
+                        fullName: 'Nuka',
+                        dateOfBirth: '2023-03-01',
+                        breed: 'German Shepherd/Border Collie',
+                    },
                 ];
                 await saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards');
             }
@@ -2734,7 +3235,6 @@ initIndexedDB()
             updateStats();
             initializeTimelineData();
             applySettings();
-
         } catch (err) {
             console.error('Initialization error:', err);
             // Re-render empty UI as fallback
@@ -2743,7 +3243,7 @@ initIndexedDB()
             updateStats();
         }
     })
-    .catch(err => {
+    .catch((err) => {
         console.error('IndexedDB initialization error:', err);
         // Fallback: use in-memory data
         renderCards();
@@ -2754,30 +3254,32 @@ initIndexedDB()
 // ==================== HEARTBEAT ====================
 (function initHeartbeat() {
     const HEARTBEAT_INTERVAL = 5000; // 5 seconds
-    
+
     // Send heartbeat to server
     function sendHeartbeat() {
-        fetch('/api/heartbeat', { method: 'POST' })
-            .catch(err => console.warn('Heartbeat failed:', err));
+        fetch('/api/heartbeat', { method: 'POST' }).catch((err) =>
+            console.warn('Heartbeat failed:', err)
+        );
     }
-    
+
     // Notify server when tab closes
     function notifyTabClose() {
-        fetch('/api/tab-closed', { method: 'POST' })
-            .catch(err => console.warn('Tab-close notification failed:', err));
+        fetch('/api/tab-closed', { method: 'POST' }).catch((err) =>
+            console.warn('Tab-close notification failed:', err)
+        );
     }
-    
+
     // Start heartbeat loop
     const heartbeatInterval = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
-    
+
     // Listen for tab/window close
     window.addEventListener('beforeunload', () => {
         clearInterval(heartbeatInterval);
         notifyTabClose();
     });
-    
+
     // Initial heartbeat
     sendHeartbeat();
-    
-    console.log('Heartbeat initialized: sending every ' + (HEARTBEAT_INTERVAL / 1000) + 's');
+
+    console.log('Heartbeat initialized: sending every ' + HEARTBEAT_INTERVAL / 1000 + 's');
 })();

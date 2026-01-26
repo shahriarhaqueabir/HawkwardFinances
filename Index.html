@@ -1,679 +1,756 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Financial Dashboard</title>
-    <link rel="stylesheet" href="styles.css" />
-    <script src="chart.min.js"></script>
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💼</text></svg>"
-    />
-  </head>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Financial Dashboard</title>
+        <link rel="stylesheet" href="styles.css" />
+        <script src="chart.min.js"></script>
+        <link
+            rel="icon"
+            href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💼</text></svg>"
+        />
+    </head>
 
-  <body>
-    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
-    <div class="app-container">
-      <!-- SIDEBAR -->
-      <div class="sidebar">
-        <div class="sidebar-logo">
-          <h2>💼 HawkwardFinances</h2>
-          <p>Accounts & Management</p>
-        </div>
-        <ul class="sidebar-nav">
-          <li>
-            <button class="nav-btn active" data-tab="profile">
-              👤 My Cards
-            </button>
-          </li>
-          <li>
-            <button class="nav-btn" data-tab="accounts">📋 Balance</button>
-          </li>
-          <li>
-            <button class="nav-btn" data-tab="timeline">📅 Timeline</button>
-          </li>
-          <li>
-            <button class="nav-btn" data-tab="analytics">📊 Reports</button>
-          </li>
-          <li>
-            <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
-          </li>
-        </ul>
-      </div>
-
-      <!-- MAIN CONTENT -->
-      <div class="main-content">
-        <div class="header">
-          <button id="mobileMenuBtn" class="mobile-toggle" onclick="toggleSidebar()">
-            ☰
-          </button>
-          <h1 id="pageTitle">👤 My Cards</h1>
-        </div>
-
-        <div class="content-area">
-          <!-- TAB: My Profile -->
-          <div id="profile" class="tab-content active">
-            <h2 class="page-title-section">👤 My Cards</h2>
-            <p class="page-description">Create and manage your profile cards</p>
-            <div class="mb-20">
-              <button class="btn-primary" onclick="showCreateCardModal()">
-                ➕ Create New Card
-              </button>
-            </div>
-            <div class="family-grid" id="cardsGrid"></div>
-          </div>
-
-          <!-- TAB: Timeline (3 Years) -->
-          <div id="timeline" class="tab-content">
-            <h2 class="page-title-section" id="timelineTitle">
-              3-Year Financial Timeline
-            </h2>
-            <div class="mb-20">
-              <label class="font-bold mr-10">Starting Balance (€):</label>
-              <input
-                type="number"
-                id="startingBalanceInput"
-                step="0.01"
-                class="input-primary"
-                aria-label="Starting Balance"
-              />
-            </div>
-
-            <div class="timeline-table-wrapper">
-              <div class="timeline-controls">
-                <button id="saveTimelineBtn" class="btn-success">
-                  💾 Save Timeline Data
-                </button>
-                <button id="populateTimelineBtn" onclick="autoPopulateTimeline()" class="btn-primary">
-                  🔄 Populate from Balance
-                </button>
-                <button onclick="jumpToToday()" class="btn-info">
-                  📍 Jump to Today
-                </button>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th class="col-lock">Lock</th>
-                    <th>Year - Month</th>
-                    <th>Income</th>
-                    <th>Expense</th>
-                    <th>Balance</th>
-                  </tr>
-                </thead>
-                <tbody id="timelineBody"></tbody>
-              </table>
-            </div>
-
-            <!-- Financial Goals Section -->
-            <div id="goalsContainer" class="goals-wrapper">
-                <div class="header-with-actions">
-                    <h3>🏆 Savings Goals</h3>
-                    <button class="btn-tiny" onclick="addGoal()">➕ New Goal</button>
+    <body>
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+        <div class="app-container">
+            <!-- SIDEBAR -->
+            <div class="sidebar">
+                <div class="sidebar-logo">
+                    <h2>💼 HawkwardFinances</h2>
+                    <p>Accounts & Management</p>
                 </div>
-                <div id="goalsGrid" class="goals-grid">
-                    <!-- Goals injected via JS -->
-                    <div class="empty-state">No goals set yet. Start saving!</div>
+                <ul class="sidebar-nav">
+                    <li>
+                        <button class="nav-btn active" data-tab="profile">👤 My Cards</button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="accounts">📋 Balance</button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="timeline">📅 Timeline</button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="analytics">📊 Reports</button>
+                    </li>
+                    <li>
+                        <button class="nav-btn" data-tab="settings">⚙️ Settings</button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- MAIN CONTENT -->
+            <div class="main-content">
+                <div class="header">
+                    <button id="mobileMenuBtn" class="mobile-toggle" onclick="toggleSidebar()">
+                        ☰
+                    </button>
+                    <h1 id="pageTitle">👤 My Cards</h1>
                 </div>
-            </div>
 
-            <div class="chart-container chart-container-tall">
-              <h3 id="chartTitle">3-Year Balance Projection</h3>
-              <canvas id="balanceChart"></canvas>
-            </div>
-          </div>
+                <div class="content-area">
+                    <!-- TAB: My Profile -->
+                    <div id="profile" class="tab-content active">
+                        <h2 class="page-title-section">👤 My Cards</h2>
+                        <p class="page-description">Create and manage your profile cards</p>
+                        <div class="mb-20">
+                            <button class="btn-primary" onclick="showCreateCardModal()">
+                                ➕ Create New Card
+                            </button>
+                        </div>
+                        <div class="family-grid" id="cardsGrid"></div>
+                    </div>
 
-          <!-- TAB: Account Overview -->
-          <div id="analytics" class="tab-content">
-            <h2 class="page-title-section">Account Inventory & Analysis</h2>
+                    <!-- TAB: Timeline (3 Years) -->
+                    <div id="timeline" class="tab-content">
+                        <h2 class="page-title-section" id="timelineTitle">
+                            3-Year Financial Timeline
+                        </h2>
+                        <div class="mb-20">
+                            <label class="font-bold mr-10">Starting Balance (€):</label>
+                            <input
+                                type="number"
+                                id="startingBalanceInput"
+                                step="0.01"
+                                class="input-primary"
+                                aria-label="Starting Balance"
+                            />
+                        </div>
 
-            <div class="stats-grid">
-              <div class="stat-card">
-                <div class="stat-label">Total Accounts</div>
-                <div class="stat-value" id="totalAccounts">0</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Monthly Income</div>
-                <div class="stat-value type-income" id="statMonthlyIncome">€0</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Monthly Expense</div>
-                <div class="stat-value type-expense" id="statMonthlyExpense">€0</div>
-              </div>
-              <div class="stat-card">
-                <div class="stat-label">Monthly Net Flow</div>
-                <div class="stat-value" id="statNetFlow">€0</div>
-              </div>
-            </div>
+                        <div class="timeline-table-wrapper">
+                            <div class="timeline-controls">
+                                <button id="saveTimelineBtn" class="btn-success">
+                                    💾 Save Timeline Data
+                                </button>
+                                <button
+                                    id="populateTimelineBtn"
+                                    onclick="autoPopulateTimeline()"
+                                    class="btn-primary"
+                                >
+                                    🔄 Populate from Balance
+                                </button>
+                                <button onclick="jumpToToday()" class="btn-info">
+                                    📍 Jump to Today
+                                </button>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="col-lock">Lock</th>
+                                        <th>Year - Month</th>
+                                        <th>Income</th>
+                                        <th>Expense</th>
+                                        <th>Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="timelineBody"></tbody>
+                            </table>
+                        </div>
 
-            <div class="charts-grid">
-              <div class="chart-container">
-                <h3>ACCOUNTS BY CATEGORY</h3>
-                <canvas id="categoryChart"></canvas>
-              </div>
-              <div class="chart-container">
-                <h3>MONTHLY SPEND DISTRIBUTION</h3>
-                <canvas id="costChart"></canvas>
-              </div>
-            </div>
+                        <!-- Financial Goals Section -->
+                        <div id="goalsContainer" class="goals-wrapper">
+                            <div class="header-with-actions">
+                                <h3>🏆 Savings Goals</h3>
+                                <button class="btn-tiny" onclick="addGoal()">➕ New Goal</button>
+                            </div>
+                            <div id="goalsGrid" class="goals-grid">
+                                <!-- Goals injected via JS -->
+                                <div class="empty-state">No goals set yet. Start saving!</div>
+                            </div>
+                        </div>
 
-            <!-- <div class="charts-grid">
+                        <div class="chart-container chart-container-tall">
+                            <h3 id="chartTitle">3-Year Balance Projection</h3>
+                            <canvas id="balanceChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- TAB: Account Overview -->
+                    <div id="analytics" class="tab-content">
+                        <h2 class="page-title-section">Account Inventory & Analysis</h2>
+
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-label">Total Accounts</div>
+                                <div class="stat-value" id="totalAccounts">0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Monthly Income</div>
+                                <div class="stat-value type-income" id="statMonthlyIncome">€0</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Monthly Expense</div>
+                                <div class="stat-value type-expense" id="statMonthlyExpense">
+                                    €0
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-label">Monthly Net Flow</div>
+                                <div class="stat-value" id="statNetFlow">€0</div>
+                            </div>
+                        </div>
+
+                        <div class="charts-grid">
+                            <div class="chart-container">
+                                <h3>ACCOUNTS BY CATEGORY</h3>
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>MONTHLY SPEND DISTRIBUTION</h3>
+                                <canvas id="costChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- <div class="charts-grid">
               <div class="chart-container">
                 <h3>Cash Flow Comparison</h3>
                 <canvas id="cashFlowChart"></canvas>
               </div>
             </div> -->
 
-            <div class="charts-grid">
-              <div class="chart-container">
-                <h3>CRITICALITY LEVELS</h3>
-                <canvas id="criticalityChart"></canvas>
-              </div>
-              <div class="chart-container">
-                <h3>ACCOUNT STATUS</h3>
-                <canvas id="statusChart"></canvas>
-              </div>
-            </div>
-          </div>
+                        <div class="charts-grid">
+                            <div class="chart-container">
+                                <h3>CRITICALITY LEVELS</h3>
+                                <canvas id="criticalityChart"></canvas>
+                            </div>
+                            <div class="chart-container">
+                                <h3>ACCOUNT STATUS</h3>
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
 
-          <!-- TAB: All Accounts -->
-          <div id="accounts" class="tab-content">
-            <div class="table-wrapper">
-              <div class="filter-bar">
-                <div class="filter-group">
-                  <label>Category</label>
-                  <select id="filterCategory" class="filter-select" title="Filter by Category" onchange="filterAccounts()">
-                    <option value="">All Categories</option>
-                    <!-- Populated via JS -->
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <label>Type</label>
-                  <select id="filterType" class="filter-select" title="Filter by Type" onchange="filterAccounts()">
-                    <option value="">All Types</option>
-                    <option value="expense">Expense</option>
-                    <option value="income">Income</option>
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <label>Status</label>
-                  <select id="filterStatus" class="filter-select" title="Filter by Status" onchange="filterAccounts()">
-                    <option value="">All Statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Planned">Planned</option>
-                    <option value="Dormant">Dormant</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <label>Criticality</label>
-                  <select id="filterCriticality" class="filter-select" title="Filter by Criticality" onchange="filterAccounts()">
-                    <option value="">All Levels</option>
-                    <option value="Critical">Critical</option>
-                    <option value="Essential">Essential</option>
-                    <option value="Important">Important</option>
-                    <option value="Optional">Optional</option>
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <label>Owner</label>
-                  <select id="filterOwner" class="filter-select" title="Filter by Owner" onchange="filterAccounts()">
-                    <option value="">All Owners</option>
-                    <option value="unassigned">Unassigned</option>
-                    <!-- Populated via JS -->
-                  </select>
-                </div>
-                <div class="filter-actions">
-                  <button class="btn-secondary" onclick="clearAllFilters()">
-                    🧹 Clear Filters
-                  </button>
-                  <button id="addAccountBtn" class="btn-primary" onclick="toggleAddForm()">
-                    ➕ Add Account
-                  </button>
-                </div>
-              </div>
+                    <!-- TAB: All Accounts -->
+                    <div id="accounts" class="tab-content">
+                        <div class="table-wrapper">
+                            <div class="filter-bar">
+                                <div class="filter-group">
+                                    <label>Category</label>
+                                    <select
+                                        id="filterCategory"
+                                        class="filter-select"
+                                        title="Filter by Category"
+                                        onchange="filterAccounts()"
+                                    >
+                                        <option value="">All Categories</option>
+                                        <!-- Populated via JS -->
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Type</label>
+                                    <select
+                                        id="filterType"
+                                        class="filter-select"
+                                        title="Filter by Type"
+                                        onchange="filterAccounts()"
+                                    >
+                                        <option value="">All Types</option>
+                                        <option value="expense">Expense</option>
+                                        <option value="income">Income</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Status</label>
+                                    <select
+                                        id="filterStatus"
+                                        class="filter-select"
+                                        title="Filter by Status"
+                                        onchange="filterAccounts()"
+                                    >
+                                        <option value="">All Statuses</option>
+                                        <option value="Active">Active</option>
+                                        <option value="Planned">Planned</option>
+                                        <option value="Dormant">Dormant</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Criticality</label>
+                                    <select
+                                        id="filterCriticality"
+                                        class="filter-select"
+                                        title="Filter by Criticality"
+                                        onchange="filterAccounts()"
+                                    >
+                                        <option value="">All Levels</option>
+                                        <option value="Critical">Critical</option>
+                                        <option value="Essential">Essential</option>
+                                        <option value="Important">Important</option>
+                                        <option value="Optional">Optional</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Owner</label>
+                                    <select
+                                        id="filterOwner"
+                                        class="filter-select"
+                                        title="Filter by Owner"
+                                        onchange="filterAccounts()"
+                                    >
+                                        <option value="">All Owners</option>
+                                        <option value="unassigned">Unassigned</option>
+                                        <!-- Populated via JS -->
+                                    </select>
+                                </div>
+                                <div class="filter-actions">
+                                    <button class="btn-secondary" onclick="clearAllFilters()">
+                                        🧹 Clear Filters
+                                    </button>
+                                    <button
+                                        id="addAccountBtn"
+                                        class="btn-primary"
+                                        onclick="toggleAddForm()"
+                                    >
+                                        ➕ Add Account
+                                    </button>
+                                </div>
+                            </div>
 
-              <table>
-                <thead>
-                  <tr>
-                    <th
-                      onclick="sortTable('id')"
-                      data-sort="id"
-                      class="cursor-pointer"
-                    >
-                      # ↕
-                    </th>
-                    <th
-                      onclick="sortTable('name')"
-                      data-sort="name"
-                      class="cursor-pointer"
-                    >
-                      Service Name ↕
-                    </th>
-                    <th
-                      onclick="sortTable('category')"
-                      data-sort="category"
-                      class="cursor-pointer"
-                    >
-                      Category ↕
-                    </th>
-                    <th
-                      onclick="sortTable('type')"
-                      data-sort="type"
-                      class="cursor-pointer"
-                    >
-                      Type ↕
-                    </th>
-                    <th
-                      onclick="sortTable('monthlyPayment')"
-                      data-sort="monthlyPayment"
-                      class="cursor-pointer"
-                    >
-                      Monthly ↕
-                    </th>
-                    <th
-                      onclick="sortTable('annualPayment')"
-                      data-sort="annualPayment"
-                      class="cursor-pointer"
-                    >
-                      Annual ↕
-                    </th>
-                    <th
-                      onclick="sortTable('hasReminder')"
-                      data-sort="hasReminder"
-                      class="cursor-pointer"
-                      title="Sort by Paid Status"
-                    >
-                      Paid? ↕
-                    </th>
-                    <th
-                      onclick="sortTable('status')"
-                      data-sort="status"
-                      class="cursor-pointer"
-                      title="Sort by Account Status"
-                    >
-                      Status ↕
-                    </th>
-                    <th
-                      onclick="sortTable('priority')"
-                      data-sort="priority"
-                      class="cursor-pointer"
-                      title="Sort by Criticality Level"
-                    >
-                      Criticality ↕
-                    </th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="accountsBody"></tbody>
-              </table>
-            </div>
-          </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th
+                                            onclick="sortTable('id')"
+                                            data-sort="id"
+                                            class="cursor-pointer"
+                                        >
+                                            # ↕
+                                        </th>
+                                        <th
+                                            onclick="sortTable('name')"
+                                            data-sort="name"
+                                            class="cursor-pointer"
+                                        >
+                                            Service Name ↕
+                                        </th>
+                                        <th
+                                            onclick="sortTable('category')"
+                                            data-sort="category"
+                                            class="cursor-pointer"
+                                        >
+                                            Category ↕
+                                        </th>
+                                        <th
+                                            onclick="sortTable('type')"
+                                            data-sort="type"
+                                            class="cursor-pointer"
+                                        >
+                                            Type ↕
+                                        </th>
+                                        <th
+                                            onclick="sortTable('monthlyPayment')"
+                                            data-sort="monthlyPayment"
+                                            class="cursor-pointer"
+                                        >
+                                            Monthly ↕
+                                        </th>
+                                        <th
+                                            onclick="sortTable('annualPayment')"
+                                            data-sort="annualPayment"
+                                            class="cursor-pointer"
+                                        >
+                                            Annual ↕
+                                        </th>
+                                        <th
+                                            onclick="sortTable('hasReminder')"
+                                            data-sort="hasReminder"
+                                            class="cursor-pointer"
+                                            title="Sort by Paid Status"
+                                        >
+                                            Paid? ↕
+                                        </th>
+                                        <th
+                                            onclick="sortTable('status')"
+                                            data-sort="status"
+                                            class="cursor-pointer"
+                                            title="Sort by Account Status"
+                                        >
+                                            Status ↕
+                                        </th>
+                                        <th
+                                            onclick="sortTable('priority')"
+                                            data-sort="priority"
+                                            class="cursor-pointer"
+                                            title="Sort by Criticality Level"
+                                        >
+                                            Criticality ↕
+                                        </th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accountsBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
 
-          <!-- TAB: Settings -->
-          <div id="settings" class="tab-content">
-            <h2 class="page-title-section">Application Settings</h2>
-            <p class="page-description">
-              Customize your experience and manage your data
-            </p>
+                    <!-- TAB: Settings -->
+                    <div id="settings" class="tab-content">
+                        <h2 class="page-title-section">Application Settings</h2>
+                        <p class="page-description">
+                            Customize your experience and manage your data
+                        </p>
 
-            <div class="settings-grid">
-              <!-- Visual Settings -->
-              <div class="settings-card">
-                <div class="settings-card-header">
-                  <h3>🎨 Visuals</h3>
-                </div>
-                <div class="settings-item">
-                  <label>Primary Theme Color</label>
-                  <input
-                    type="color"
-                    id="settingPrimaryColor"
-                    class="color-picker"
-                  />
-                </div>
-                <!-- <div class="settings-item">
+                        <div class="settings-grid">
+                            <!-- Visual Settings -->
+                            <div class="settings-card">
+                                <div class="settings-card-header">
+                                    <h3>🎨 Visuals</h3>
+                                </div>
+                                <div class="settings-item">
+                                    <label>Primary Theme Color</label>
+                                    <input
+                                        type="color"
+                                        id="settingPrimaryColor"
+                                        class="color-picker"
+                                    />
+                                </div>
+                                <!-- <div class="settings-item">
                   <label>Dark Mode</label>
                   <div class="toggle-switch">
                     <input type="checkbox" id="settingDarkMode" title="Toggle Dark Mode" />
                     <span class="slider"></span>
                   </div>
                 </div> -->
-              </div>
+                            </div>
 
-              <!-- Localization Settings -->
-              <div class="settings-card">
-                <div class="settings-card-header">
-                  <h3>🌍 Localization</h3>
-                </div>
-                <div class="settings-item">
-                  <label>Currency Symbol</label>
-                  <select id="settingCurrency" class="form-filter" title="Select Currency Symbol">
-                    <option value="€">Euro (€)</option>
-                    <option value="$">Dollar ($)</option>
-                    <option value="£">Pound (£)</option>
-                    <option value="¥">Yen (¥)</option>
-                  </select>
-                </div>
-              </div>
+                            <!-- Localization Settings -->
+                            <div class="settings-card">
+                                <div class="settings-card-header">
+                                    <h3>🌍 Localization</h3>
+                                </div>
+                                <div class="settings-item">
+                                    <label>Currency Symbol</label>
+                                    <select
+                                        id="settingCurrency"
+                                        class="form-filter"
+                                        title="Select Currency Symbol"
+                                    >
+                                        <option value="€">Euro (€)</option>
+                                        <option value="$">Dollar ($)</option>
+                                        <option value="£">Pound (£)</option>
+                                        <option value="¥">Yen (¥)</option>
+                                    </select>
+                                </div>
+                            </div>
 
-              <!-- Data Management -->
-              <div class="settings-card">
-                <div class="settings-card-header">
-                  <h3>📂 Data Management</h3>
-                </div>
-                <div class="settings-actions-vertical">
-                  <button class="btn-primary w-full" onclick="exportData()">
-                    📤 Export JSON Backup
-                  </button>
-                  <button class="btn-success w-full" onclick="downloadCSV()">
-                    📊 Download Balance CSV
-                  </button>
-                  <button
-                    class="btn-info w-full"
-                    onclick="document.getElementById('importFile').click()"
-                    title="Import JSON Data"
-                  >
-                    📥 Import JSON Data
-                  </button>
-                  <input
-                    type="file"
-                    id="importFile"
-                    accept=".json"
-                    class="hidden-input"
-                    aria-label="Import JSON Data File Attachment"
-                    onchange="importData(event)"
-                  />
-                  <button
-                    class="btn-danger w-full"
-                    onclick="showFactoryResetModal()"
-                  >
-                    ⚠️ Factory Reset
-                  </button>
-                </div>
-              </div>
+                            <!-- Data Management -->
+                            <div class="settings-card">
+                                <div class="settings-card-header">
+                                    <h3>📂 Data Management</h3>
+                                </div>
+                                <div class="settings-actions-vertical">
+                                    <button class="btn-primary w-full" onclick="exportData()">
+                                        📤 Export JSON Backup
+                                    </button>
+                                    <button class="btn-success w-full" onclick="downloadCSV()">
+                                        📊 Download Balance CSV
+                                    </button>
+                                    <button
+                                        class="btn-info w-full"
+                                        onclick="document.getElementById('importFile').click()"
+                                        title="Import JSON Data"
+                                    >
+                                        📥 Import JSON Data
+                                    </button>
+                                    <input
+                                        type="file"
+                                        id="importFile"
+                                        accept=".json"
+                                        class="hidden-input"
+                                        aria-label="Import JSON Data File Attachment"
+                                        onchange="importData(event)"
+                                    />
+                                    <button
+                                        class="btn-danger w-full"
+                                        onclick="showFactoryResetModal()"
+                                    >
+                                        ⚠️ Factory Reset
+                                    </button>
+                                </div>
+                            </div>
 
-              <!-- System Settings -->
-              <div class="settings-card">
-                <div class="settings-card-header">
-                  <h3>⚙️ System</h3>
-                </div>
-                <!-- <div class="settings-item">
+                            <!-- System Settings -->
+                            <div class="settings-card">
+                                <div class="settings-card-header">
+                                    <h3>⚙️ System</h3>
+                                </div>
+                                <!-- <div class="settings-item">
                   <label>Auto-Shutdown</label>
                   <div class="toggle-switch">
                     <input type="checkbox" id="settingAutoShutdown" title="Toggle Auto-Shutdown" />
                     <span class="slider"></span>
                   </div>
                 </div> -->
-                <div class="settings-item flex-column">
-                  <div class="flex-between w-full mb-10">
-                    <label>Inactivity Timeout</label>
-                    <span id="timeoutDisplay" class="font-bold">15s</span>
-                  </div>
-                  <input
-                    type="range"
-                    id="settingTimeout"
-                    min="10"
-                    max="1800"
-                    step="10"
-                    class="range-slider w-full"
-                  />
-                  <div class="flex-between w-full mt-5">
-                    <span class="text-xs">10s</span>
-                    <span class="text-xs">30m</span>
-                  </div>
-                </div>
-              </div>
+                                <div class="settings-item flex-column">
+                                    <div class="flex-between w-full mb-10">
+                                        <label>Inactivity Timeout</label>
+                                        <span id="timeoutDisplay" class="font-bold">15s</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        id="settingTimeout"
+                                        min="10"
+                                        max="1800"
+                                        step="10"
+                                        class="range-slider w-full"
+                                    />
+                                    <div class="flex-between w-full mt-5">
+                                        <span class="text-xs">10s</span>
+                                        <span class="text-xs">30m</span>
+                                    </div>
+                                </div>
+                            </div>
 
-              <!-- Metadata Management -->
-              <div class="settings-card full-width-card" style="grid-column: 1 / -1;">
-                <div class="settings-card-header">
-                  <h3>🏷️ Metadata Management</h3>
-                </div>
-                <div class="metadata-grid">
-                  <div class="metadata-section">
-                    <h4>Categories</h4>
-                    <div id="categoryManager" class="metadata-list-container"></div>
-                    <div class="metadata-add-form">
-                      <input type="text" id="newCategoryInput" placeholder="New category name...">
-                      <button class="btn-success btn-small" onclick="addMetadataItem('categories')">Add</button>
+                            <!-- Metadata Management -->
+                            <div class="settings-card full-width-card" style="grid-column: 1 / -1">
+                                <div class="settings-card-header">
+                                    <h3>🏷️ Metadata Management</h3>
+                                </div>
+                                <div class="metadata-grid">
+                                    <div class="metadata-section">
+                                        <h4>Categories</h4>
+                                        <div
+                                            id="categoryManager"
+                                            class="metadata-list-container"
+                                        ></div>
+                                        <div class="metadata-add-form">
+                                            <input
+                                                type="text"
+                                                id="newCategoryInput"
+                                                placeholder="New category name..."
+                                            />
+                                            <button
+                                                class="btn-success btn-small"
+                                                onclick="addMetadataItem('categories')"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="metadata-section">
+                                        <h4>Account Statuses</h4>
+                                        <div
+                                            id="statusManager"
+                                            class="metadata-list-container"
+                                        ></div>
+                                        <div class="metadata-add-form">
+                                            <input
+                                                type="text"
+                                                id="newStatusInput"
+                                                placeholder="New status name..."
+                                            />
+                                            <button
+                                                class="btn-success btn-small"
+                                                onclick="addMetadataItem('statuses')"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="metadata-section">
+                                        <h4>Criticality Levels</h4>
+                                        <div
+                                            id="criticalityManager"
+                                            class="metadata-list-container"
+                                        ></div>
+                                        <div class="metadata-add-form">
+                                            <input
+                                                type="text"
+                                                id="newCriticalityInput"
+                                                placeholder="New criticality level..."
+                                            />
+                                            <button
+                                                class="btn-success btn-small"
+                                                onclick="addMetadataItem('criticalities')"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                  </div>
-                  <div class="metadata-section">
-                    <h4>Account Statuses</h4>
-                    <div id="statusManager" class="metadata-list-container"></div>
-                    <div class="metadata-add-form">
-                      <input type="text" id="newStatusInput" placeholder="New status name...">
-                      <button class="btn-success btn-small" onclick="addMetadataItem('statuses')">Add</button>
-                    </div>
-                  </div>
-                  <div class="metadata-section">
-                    <h4>Criticality Levels</h4>
-                    <div id="criticalityManager" class="metadata-list-container"></div>
-                    <div class="metadata-add-form">
-                      <input type="text" id="newCriticalityInput" placeholder="New criticality level...">
-                      <button class="btn-success btn-small" onclick="addMetadataItem('criticalities')">Add</button>
-                    </div>
-                  </div>
                 </div>
-              </div>
             </div>
-          </div>
+
+            <!-- MODAL: Factory Reset Confirmation -->
+            <div id="resetModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">⚠️ Factory Reset</div>
+                    <div class="modal-body" style="padding: 20px 0">
+                        <p>This will clear all your profiles, accounts, and timeline data.</p>
+                        <p style="margin-top: 15px">
+                            <label class="flex-center gap-10 cursor-pointer">
+                                <input type="checkbox" id="includeSeedData" checked />
+                                <span>Include default seed data</span>
+                            </label>
+                        </p>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-secondary" onclick="closeResetModal()">Cancel</button>
+                        <button class="btn-primary" onclick="confirmFactoryReset()">
+                            Confirm Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Create/Edit Card -->
+            <div id="cardModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header" id="cardModalTitle">Create Profile Card</div>
+
+                    <!-- Step 1: Template Selection -->
+                    <div class="template-selector" id="templateSelector">
+                        <div class="template-option selected" onclick="selectTemplate('adult')">
+                            <span class="template-icon">👨‍💼</span>
+                            <div class="template-label">Adult</div>
+                        </div>
+                        <div class="template-option" onclick="selectTemplate('child')">
+                            <span class="template-icon">🧸</span>
+                            <div class="template-label">Child</div>
+                        </div>
+                        <div class="template-option" onclick="selectTemplate('pet')">
+                            <span class="template-icon">🐾</span>
+                            <div class="template-label">Pet</div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Emoji Picker -->
+                    <div class="emoji-section">
+                        <label class="emoji-label">Choose Avatar</label>
+                        <div class="emoji-grid" id="emojiGrid">
+                            <!-- Emojis injected via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Dynamic Form -->
+                    <div class="modal-form" id="cardForm">
+                        <!-- Fields injected via JS based on template -->
+                    </div>
+
+                    <div class="modal-actions">
+                        <button class="btn-secondary" onclick="closeCardModal()">Cancel</button>
+                        <button class="btn-primary" onclick="saveCard()">Save Profile</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL: Add/Edit Account -->
+            <div id="accountModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header" id="modalTitle">Add New Account</div>
+                    <div class="modal-form" id="accountForm">
+                        <div class="form-group form-preset-group">
+                            <label>⚡ Quick Presets</label>
+                            <select
+                                id="formPreset"
+                                onchange="applyPreset()"
+                                aria-label="Quick Presets"
+                            >
+                                <option value="">Select a preset...</option>
+                                <!-- Presets populated via JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Service Name *</label>
+                            <input
+                                type="text"
+                                id="formService"
+                                required
+                                aria-label="Service Name"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Assigned To</label>
+                            <select id="formOwner" aria-label="Assigned Profile">
+                                <option value="">(Unassigned)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Category *</label>
+                            <select id="formCategory" required aria-label="Service Category">
+                                <option value="">Select Category</option>
+                                <!-- categories populated via JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Transaction Type *</label>
+                            <select id="formType" required aria-label="Transaction Type">
+                                <option value="expense">📉 Expense</option>
+                                <option value="income">📈 Income</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label id="labelMonthlyAmount">Monthly Amount (€)</label>
+                            <input
+                                type="number"
+                                id="formMonthlyCost"
+                                min="0"
+                                step="0.01"
+                                value="0"
+                                aria-label="Monthly Amount"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label id="labelAnnualAmount">Annual Amount (€)</label>
+                            <input
+                                type="number"
+                                id="formAnnualCost"
+                                min="0"
+                                step="0.01"
+                                value="0"
+                                aria-label="Annual Amount"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Paid? *</label>
+                            <select id="formPaid" required aria-label="Payment Status">
+                                <option value="">Select Status</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status *</label>
+                            <select id="formStatus" required aria-label="Account Status">
+                                <option value="">Select Status</option>
+                                <!-- statuses populated via JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Criticality *</label>
+                            <select id="formCriticality" required aria-label="Criticality Level">
+                                <option value="">Select Level</option>
+                                <!-- criticalities populated via JS -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-danger" onclick="closeAccountModal()">❌ Cancel</button>
+                        <button class="btn-success" onclick="saveAccount()">💾 Save Account</button>
+                    </div>
+                </div>
+            </div>
+            <!-- MODAL: Add/Edit Goal -->
+            <div id="goalModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">🏆 Set Savings Goal</div>
+                    <div class="modal-form">
+                        <div class="form-group">
+                            <label>Goal Name *</label>
+                            <input
+                                type="text"
+                                id="goalName"
+                                placeholder="e.g. House Deposit"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Target Amount *</label>
+                            <input
+                                type="number"
+                                id="goalTarget"
+                                placeholder="e.g. 50000"
+                                min="1"
+                                step="100"
+                                title="Target savings amount"
+                                required
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Current Savings</label>
+                            <input
+                                type="number"
+                                id="goalCurrent"
+                                placeholder="e.g. 1000"
+                                min="0"
+                                value="0"
+                                step="10"
+                                title="Current saved amount"
+                            />
+                        </div>
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select id="goalPriority" title="Goal priority">
+                                <option value="High">🔥 High</option>
+                                <option value="Medium" selected>🔹 Medium</option>
+                                <option value="Low">💤 Low</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-secondary" onclick="closeGoalModal()">Cancel</button>
+                        <button class="btn-primary" onclick="saveGoal()">Save Goal</button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
 
-      <!-- MODAL: Factory Reset Confirmation -->
-      <div id="resetModal" class="modal">
-        <div class="modal-content">
-          <div class="modal-header">⚠️ Factory Reset</div>
-          <div class="modal-body" style="padding: 20px 0">
-            <p>
-              This will clear all your profiles, accounts, and timeline data.
-            </p>
-            <p style="margin-top: 15px">
-              <label class="flex-center gap-10 cursor-pointer">
-                <input type="checkbox" id="includeSeedData" checked />
-                <span>Include default seed data</span>
-              </label>
-            </p>
-          </div>
-          <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeResetModal()">
-              Cancel
-            </button>
-            <button class="btn-primary" onclick="confirmFactoryReset()">
-              Confirm Reset
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: Create/Edit Card -->
-      <div id="cardModal" class="modal">
-        <div class="modal-content">
-          <div class="modal-header" id="cardModalTitle">
-            Create Profile Card
-          </div>
-
-          <!-- Step 1: Template Selection -->
-          <div class="template-selector" id="templateSelector">
-            <div
-              class="template-option selected"
-              onclick="selectTemplate('adult')"
-            >
-              <span class="template-icon">👨‍💼</span>
-              <div class="template-label">Adult</div>
-            </div>
-            <div class="template-option" onclick="selectTemplate('child')">
-              <span class="template-icon">🧸</span>
-              <div class="template-label">Child</div>
-            </div>
-            <div class="template-option" onclick="selectTemplate('pet')">
-              <span class="template-icon">🐾</span>
-              <div class="template-label">Pet</div>
-            </div>
-          </div>
-
-          <!-- Step 2: Emoji Picker -->
-          <div class="emoji-section">
-            <label class="emoji-label">Choose Avatar</label>
-            <div class="emoji-grid" id="emojiGrid">
-              <!-- Emojis injected via JS -->
-            </div>
-          </div>
-
-          <!-- Step 3: Dynamic Form -->
-          <div class="modal-form" id="cardForm">
-            <!-- Fields injected via JS based on template -->
-          </div>
-
-          <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeCardModal()">
-              Cancel
-            </button>
-            <button class="btn-primary" onclick="saveCard()">
-              Save Profile
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL: Add/Edit Account -->
-      <div id="accountModal" class="modal">
-        <div class="modal-content">
-          <div class="modal-header" id="modalTitle">Add New Account</div>
-          <div class="modal-form" id="accountForm">
-            <div class="form-group form-preset-group">
-              <label>⚡ Quick Presets</label>
-              <select id="formPreset" onchange="applyPreset()" aria-label="Quick Presets">
-                <option value="">Select a preset...</option>
-                <!-- Presets populated via JS -->
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Service Name *</label>
-              <input
-                type="text"
-                id="formService"
-                required
-                aria-label="Service Name"
-              />
-            </div>
-            <div class="form-group">
-              <label>Assigned To</label>
-              <select id="formOwner" aria-label="Assigned Profile">
-                <option value="">(Unassigned)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Category *</label>
-              <select id="formCategory" required aria-label="Service Category">
-                <option value="">Select Category</option>
-                <!-- categories populated via JS -->
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Transaction Type *</label>
-              <select id="formType" required aria-label="Transaction Type">
-                <option value="expense">📉 Expense</option>
-                <option value="income">📈 Income</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label id="labelMonthlyAmount">Monthly Amount (€)</label>
-              <input
-                type="number"
-                id="formMonthlyCost"
-                min="0"
-                step="0.01"
-                value="0"
-                aria-label="Monthly Amount"
-              />
-            </div>
-            <div class="form-group">
-              <label id="labelAnnualAmount">Annual Amount (€)</label>
-              <input
-                type="number"
-                id="formAnnualCost"
-                min="0"
-                step="0.01"
-                value="0"
-                aria-label="Annual Amount"
-              />
-            </div>
-            <div class="form-group">
-              <label>Paid? *</label>
-              <select id="formPaid" required aria-label="Payment Status">
-                <option value="">Select Status</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Status *</label>
-              <select id="formStatus" required aria-label="Account Status">
-                <option value="">Select Status</option>
-                <!-- statuses populated via JS -->
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Criticality *</label>
-              <select
-                id="formCriticality"
-                required
-                aria-label="Criticality Level"
-              >
-                <option value="">Select Level</option>
-                <!-- criticalities populated via JS -->
-              </select>
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button class="btn-danger" onclick="closeAccountModal()">
-              ❌ Cancel
-            </button>
-            <button class="btn-success" onclick="saveAccount()">
-              💾 Save Account
-            </button>
-          </div>
-        </div>
-      </div>
-      <!-- MODAL: Add/Edit Goal -->
-      <div id="goalModal" class="modal">
-        <div class="modal-content">
-          <div class="modal-header">🏆 Set Savings Goal</div>
-          <div class="modal-form">
-            <div class="form-group">
-              <label>Goal Name *</label>
-              <input type="text" id="goalName" placeholder="e.g. House Deposit" required />
-            </div>
-            <div class="form-group">
-              <label>Target Amount *</label>
-              <input type="number" id="goalTarget" placeholder="e.g. 50000" min="1" step="100" title="Target savings amount" required />
-            </div>
-            <div class="form-group">
-              <label>Current Savings</label>
-              <input type="number" id="goalCurrent" placeholder="e.g. 1000" min="0" value="0" step="10" title="Current saved amount" />
-            </div>
-            <div class="form-group">
-              <label>Priority</label>
-              <select id="goalPriority" title="Goal priority">
-                <option value="High">🔥 High</option>
-                <option value="Medium" selected>🔹 Medium</option>
-                <option value="Low">💤 Low</option>
-              </select>
-            </div>
-          </div>
-          <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeGoalModal()">Cancel</button>
-            <button class="btn-primary" onclick="saveGoal()">Save Goal</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Load configuration, then application -->
-    <script src="config.js"></script>
-    <script src="app.js"></script>
-  </body>
+        <!-- Load configuration, then application -->
+        <script src="config.js"></script>
+        <script src="app.js"></script>
+    </body>
 </html>
