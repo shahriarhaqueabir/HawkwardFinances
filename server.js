@@ -28,9 +28,11 @@ let shutdownTimer;
 let SHUTDOWN_TIMEOUT = 10000; // 10 seconds after last heartbeat (Standardized)
 let AUTO_SHUTDOWN_ENABLED = true;
 
+const IS_CI = process.env.CI === 'true';
+
 function resetShutdownTimer() {
   if (shutdownTimer) clearTimeout(shutdownTimer);
-  if (!AUTO_SHUTDOWN_ENABLED) return;
+  if (!AUTO_SHUTDOWN_ENABLED || IS_CI) return;
 
   shutdownTimer = setTimeout(() => {
     console.log("No active tab detected. Shutting down...");
@@ -39,8 +41,10 @@ function resetShutdownTimer() {
 }
 
 
-// Start the timer immediately
-resetShutdownTimer();
+// Start the timer immediately (unless in CI)
+if (!IS_CI) {
+  resetShutdownTimer();
+}
 
 // ---------------------------
 
@@ -232,13 +236,15 @@ app.listen(PORT, async () => {
     console.log('--------------------------------------------------');
     console.log(`Auto-shutdown active: Server will exit ${SHUTDOWN_TIMEOUT / 1000}s after tab is closed.`);
     
-    resetShutdownTimer();
-    
-    try {
-        const open = (await import('open')).default;
-        await open(`http://localhost:${PORT}`);
-    } catch (err) {
-        console.error('Failed to open browser:', err);
-        console.log('Please open your browser manually at http://localhost:3000');
+    if (!IS_CI) {
+        try {
+            const open = (await import('open')).default;
+            await open(`http://localhost:${PORT}`);
+        } catch (err) {
+            console.error('Failed to open browser:', err);
+            console.log('Please open your browser manually at http://localhost:3000');
+        }
+    } else {
+        console.log('CI environment detected: Skipping browser launch.');
     }
 });
