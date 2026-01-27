@@ -90,3 +90,7 @@ The project is equipped with GitHub Actions to maintain code health.
 - **Code Quality**: Automated Prettier formatting checks and npm security audits on every push.
 - **Lighthouse CI**: Automatically audits performance, accessibility, and SEO on every push.
 - **Dependabot**: Keeps dependencies up to date with automated PRs.
+
+
+LINKEDIN
+https://www.linkedin.com/in/shhaque/
