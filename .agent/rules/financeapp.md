@@ -63,7 +63,3 @@ To provide a **fully standalone, portable, and privacy-focused** financial dashb
 
 - **Dark Mode Toggle**: Disabled/Hidden in UI (User preference).
 - **Auto-Shutdown Toggle**: Hidden in UI (System functionality, not user choice).
-
----
-
-_Verified and Locked by Antigravity on 2026-01-25_
