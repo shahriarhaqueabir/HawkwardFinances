@@ -45,19 +45,17 @@ To provide a **fully standalone, portable, and privacy-focused** financial dashb
 - **Logic**: `Balance = Previous Balance + (Monthly Income - Expenses)`.
 - **Visualization**: Chart.js rendering of the timeline.
 
-### 4. Smart Data Interactions
+### 4. System Improvements (Smart & Simple)
 
-- **Interactive Analytics**: All charts are clickable, instantly filtering the Balance tab to matching records.
-- **Visual Intelligence**:
-    - Frosted "Locked" rows in Timeline to prevent historical data edits.
-    - Vibrant Red highlighting for months with projected negative balances.
-- **Navigation Assists**: "Jump to Today" feature for instant timeline scrolling.
-- **Motivational Goals**: Savings goals now display real-time "ETA" based on current net flow.
-
-### 5. Operational Excellence (Polish)
-
-- [x] **Accessibility**: Full tab-navigation and screen-reader label support.
-- [x] **Filter Clearing**: Global "Reset All" functionality for complex data audits.
+- **Data Integrity**:
+  - [x] **Import/Export**: Full JSON dump/restore capability.
+  - [x] **Auto-Backup**: `data.json` is backed up to `data.backup.json` on every server start.
+  - [x] **Privacy Centric**: Hardcoded personal data replaced with `GENERIC_SEED` constants in `config.js`.
+- **Performance**:
+  - [x] **Bundled Assets**: `Chart.js` is served locally for offline support.
+- **UX**:
+  - [x] **Metadata Propagation**: Renaming categories/statuses in Settings updates all matching accounts instantly.
+  - [x] **Heartbeat Lifecycle**: Auto-shutdown ensures no background process leaks.
 
 ## 🚫 Locked-Out / Deprecated
 
@@ -66,4 +64,4 @@ To provide a **fully standalone, portable, and privacy-focused** financial dashb
 
 ---
 
-_Verified and Locked by Antigravity on 2026-01-26_
+### Verified and Locked by Antigravity on 2026-02-04

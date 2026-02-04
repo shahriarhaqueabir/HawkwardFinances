@@ -298,6 +298,16 @@ function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, (char) => map[char]);
 }
 
+function toSafeString(value, fallback = '') {
+    if (value === null || value === undefined) return fallback;
+    return String(value);
+}
+
+function toCssToken(value, fallback = 'unknown') {
+    const raw = toSafeString(value, fallback).toLowerCase();
+    return raw.replace(/[^a-z0-9-]/g, '-');
+}
+
 /**
  * Validate and sanitize numeric input
  */
@@ -356,10 +366,16 @@ function notify(message, type = NOTIFICATION_TYPES.INFO) {
 
     const icon = TOAST_ICONS[type] || TOAST_ICONS.info;
 
-    toast.innerHTML = `
-        <div class="toast-icon">${icon}</div>
-        <div class="toast-content">${message}</div>
-    `;
+    const iconEl = document.createElement('div');
+    iconEl.className = 'toast-icon';
+    iconEl.textContent = icon;
+
+    const contentEl = document.createElement('div');
+    contentEl.className = 'toast-content';
+    contentEl.textContent = toSafeString(message);
+
+    toast.appendChild(iconEl);
+    toast.appendChild(contentEl);
 
     // 3. Add to DOM
     container.appendChild(toast);
@@ -627,6 +643,17 @@ function renderCards() {
         const cardType = card.type || 'adult';
         cardEl.className = `family-card ${cardType}`;
 
+        const safeEmoji = escapeHtml(toSafeString(card.emoji || '👤'));
+        const safeCardId = escapeHtml(toSafeString(card.id));
+        const safeCurrency = escapeHtml(toSafeString(TIMELINE_CONFIG.currency));
+        const safeDisplayName = escapeHtml(toSafeString(card.displayName || ''));
+        const safeFullName = escapeHtml(toSafeString(card.fullName || ''));
+        const safeJob = escapeHtml(toSafeString(card.job || '—'));
+        const safeSchool = escapeHtml(toSafeString(card.school || '—'));
+        const safeInterests = escapeHtml(toSafeString(card.interests || '—'));
+        const safeBreed = escapeHtml(toSafeString(card.breed || '—'));
+        const safeMicrochip = escapeHtml(toSafeString(card.microchip || '—'));
+
         let fieldsHTML = '';
 
         // Add Specific Fields based on type
@@ -634,29 +661,29 @@ function renderCards() {
             fieldsHTML += `
                 <div class="family-field">
                     <label>Occupation</label>
-                    <div class="value">${card.job || '—'}</div>
+                    <div class="value">${safeJob}</div>
                 </div>
             `;
         } else if (cardType === 'child') {
             fieldsHTML += `
                 <div class="family-field">
                     <label>School</label>
-                    <div class="value">${card.school || '—'}</div>
+                    <div class="value">${safeSchool}</div>
                 </div>
                 <div class="family-field">
                     <label>Interests</label>
-                    <div class="value">${card.interests || '—'}</div>
+                    <div class="value">${safeInterests}</div>
                 </div>
             `;
         } else if (cardType === 'pet') {
             fieldsHTML += `
                 <div class="family-field">
                     <label>Breed</label>
-                    <div class="value">${card.breed || '—'}</div>
+                    <div class="value">${safeBreed}</div>
                 </div>
                 <div class="family-field">
                     <label>Microchip</label>
-                    <div class="value">${card.microchip || '—'}</div>
+                    <div class="value">${safeMicrochip}</div>
                 </div>
             `;
         }
@@ -683,7 +710,7 @@ function renderCards() {
                 <div class="family-field" style="border-left: 3px solid #10b981; background: #f0fdf4;">
                     <label>Monthly Income</label>
                     <div class="value" style="color: #16a34a; font-weight: 800;">
-                        ${TIMELINE_CONFIG.currency}${totalCardIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        ${safeCurrency}${totalCardIncome.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </div>
                 </div>
             `;
@@ -694,7 +721,7 @@ function renderCards() {
                 <div class="family-field" style="border-left: 3px solid #f87171; background: #fef2f2;">
                     <label>Monthly Spend</label>
                     <div class="value" style="color: #dc2626; font-weight: 800;">
-                        ${TIMELINE_CONFIG.currency}${cardMonthlySpend.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        ${safeCurrency}${cardMonthlySpend.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </div>
                 </div>
             `;
@@ -702,26 +729,29 @@ function renderCards() {
 
         // Add Birthday if present
         if (card.dateOfBirth) {
+            const safeBirthday = escapeHtml(
+                new Date(card.dateOfBirth).toLocaleDateString()
+            );
             fieldsHTML += `
                 <div class="family-field">
                     <label>Birthday</label>
-                    <div class="value">${new Date(card.dateOfBirth).toLocaleDateString()}</div>
+                    <div class="value">${safeBirthday}</div>
                 </div>
             `;
         }
 
         cardEl.innerHTML = `
             <div class="card-actions">
-                <button class="action-btn" onclick="editCard('${card.id}')" title="Edit">✏️</button>
-                <button class="action-btn delete" onclick="deleteCard('${card.id}')" title="Delete">🗑️</button>
+                <button class="action-btn" onclick="editCard('${safeCardId}')" title="Edit">✏️</button>
+                <button class="action-btn delete" onclick="deleteCard('${safeCardId}')" title="Delete">🗑️</button>
             </div>
             
             <div class="family-header">
                 <div class="family-info">
-                    <div class="family-emoji">${card.emoji || '👤'}</div>
+                    <div class="family-emoji">${safeEmoji}</div>
                     <div class="family-title-group">
-                        <span class="family-title">${card.displayName}</span>
-                        <span class="family-subtitle">${card.fullName || ''}</span>
+                        <span class="family-title">${safeDisplayName}</span>
+                        <span class="family-subtitle">${safeFullName}</span>
                     </div>
                 </div>
             </div>
@@ -810,19 +840,29 @@ function renderFormFields() {
 
     const template = CARD_TEMPLATES[selectedTemplate];
 
+    const displayValue = editingCardId
+        ? document.getElementById('cardDisplayName')?.value || ''
+        : '';
+    const fullNameValue = editingCardId
+        ? document.getElementById('cardFullName')?.value || ''
+        : '';
+    const dobValue = editingCardId
+        ? document.getElementById('cardDateOfBirth')?.value || ''
+        : '';
+
     // Base Fields
     let html = `
         <div class="form-group">
             <label>Display Name *</label>
-            <input type="text" id="cardDisplayName" placeholder="e.g. Dad, Fluffy" value="${editingCardId ? document.getElementById('cardDisplayName')?.value || '' : ''}">
+            <input type="text" id="cardDisplayName" placeholder="e.g. Dad, Fluffy" value="${escapeHtml(displayValue)}">
         </div>
         <div class="form-group">
             <label>Full Name *</label>
-            <input type="text" id="cardFullName" placeholder="e.g. John Doe" value="${editingCardId ? document.getElementById('cardFullName')?.value || '' : ''}">
+            <input type="text" id="cardFullName" placeholder="e.g. John Doe" value="${escapeHtml(fullNameValue)}">
         </div>
         <div class="form-group">
             <label>Date of Birth</label>
-            <input type="date" id="cardDateOfBirth" value="${editingCardId ? document.getElementById('cardDateOfBirth')?.value || '' : ''}">
+            <input type="date" id="cardDateOfBirth" value="${escapeHtml(dobValue)}">
         </div>
     `;
 
@@ -840,8 +880,8 @@ function renderFormFields() {
 
         html += `
             <div class="form-group">
-                <label>${field.label}</label>
-                <input type="${field.type}" id="card_${field.id}" placeholder="${field.placeholder}">
+                <label>${escapeHtml(field.label)}</label>
+                <input type="${escapeHtml(field.type)}" id="card_${escapeHtml(field.id)}" placeholder="${escapeHtml(field.placeholder)}">
             </div>
         `;
     });
@@ -1029,39 +1069,46 @@ function createAccountRow(row) {
     const typeLabel = isIncome ? 'INCOME' : 'EXPENSE';
     const typeClass = isIncome ? 'type-income' : 'type-expense';
 
-    // Convert status/paid/criticality to lowecase for CSS classes
-    const statusClass = `status-${status.toLowerCase()}`;
-    const paidClass = hasReminder === 'Yes' ? 'status-paid' : 'status-unpaid';
-    const criticalityClass = `criticality-${priority.toLowerCase()}`;
+    const safeName = escapeHtml(toSafeString(name));
+    const safeCategory = escapeHtml(toSafeString(category));
+    const safeStatus = escapeHtml(toSafeString(status));
+    const safePriority = escapeHtml(toSafeString(priority));
+    const safeCurrency = escapeHtml(toSafeString(TIMELINE_CONFIG.currency));
+    const paid = toSafeString(hasReminder) === 'Yes';
+
+    // Convert status/paid/criticality to lowercase for CSS classes
+    const statusClass = `status-${toCssToken(status)}`;
+    const paidClass = paid ? 'status-paid' : 'status-unpaid';
+    const criticalityClass = `criticality-${toCssToken(priority)}`;
 
     tr.innerHTML = `
         <td class="col-id">${id}</td>
         <td class="col-service">
             <div class="service-info">
-                <span class="service-name">${name}</span>
+                <span class="service-name">${safeName}</span>
             </div>
         </td>
         <td class="col-category">
-            <span class="badge badge-outline category-badge">${category}</span>
+            <span class="badge badge-outline category-badge">${safeCategory}</span>
         </td>
         <td class="col-type">
             <span class="badge ${typeClass}">${typeLabel}</span>
         </td>
-        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${TIMELINE_CONFIG.currency}${monthlyPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${TIMELINE_CONFIG.currency}${annualPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${safeCurrency}${monthlyPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+        <td class="col-cost tabular ${isIncome ? 'type-income' : ''}">${safeCurrency}${annualPayment.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
         <td class="col-paid">
-            <span class="badge ${paidClass}">${hasReminder === 'Yes' ? 'PAID' : 'UNPAID'}</span>
+            <span class="badge ${paidClass}">${paid ? 'PAID' : 'UNPAID'}</span>
         </td>
         <td class="col-status">
-            <span class="badge ${statusClass}">${status}</span>
+            <span class="badge ${statusClass}">${safeStatus}</span>
         </td>
         <td class="col-criticality">
-            <span class="badge ${criticalityClass}">${priority}</span>
+            <span class="badge ${criticalityClass}">${safePriority}</span>
         </td>
         <td class="col-actions">
             <div class="table-actions">
-                <button class="btn-icon edit" onclick="editAccount(${id})" title="Edit ${name}">✏️</button>
-                <button class="btn-icon delete" onclick="deleteAccount(${id})" title="Delete ${name}">🗑️</button>
+                <button class="btn-icon edit" onclick="editAccount(${id})" title="Edit ${safeName}">✏️</button>
+                <button class="btn-icon delete" onclick="deleteAccount(${id})" title="Delete ${safeName}">🗑️</button>
             </div>
         </td>
     `;
@@ -1912,6 +1959,12 @@ function renderTimelineTable(timelineData) {
         // Unique ID for navigation (e.g. 2025-January)
         row.id = `${item.year}-${item.month}`;
 
+        const safeYear = escapeHtml(toSafeString(item.year));
+        const safeDisplay = escapeHtml(toSafeString(item.display));
+        const safeCurrency = escapeHtml(toSafeString(TIMELINE_CONFIG.currency));
+        const incomeVal = sanitizeNumber(item.income, 0, 100000000);
+        const expenseVal = sanitizeNumber(item.expenses, 0, 100000000);
+
         const isNegative = item.balance < 0;
         const balanceClass = isNegative
             ? 'timeline-balance negative-balance'
@@ -1920,7 +1973,7 @@ function renderTimelineTable(timelineData) {
         // Add divider for new years
         if (item.month === 'January' && index > 0) {
             const separatorRow = document.createElement('tr');
-            separatorRow.innerHTML = `<td colspan="5" style="background-color: #f8fafc; font-weight: 800; padding: 10px 15px; border-top: 2px solid #e2e8f0; color: #475569;">🗓️ ${item.year}</td>`;
+            separatorRow.innerHTML = `<td colspan="5" style="background-color: #f8fafc; font-weight: 800; padding: 10px 15px; border-top: 2px solid #e2e8f0; color: #475569;">🗓️ ${safeYear}</td>`;
             tbody.appendChild(separatorRow);
         }
 
@@ -1933,18 +1986,18 @@ function renderTimelineTable(timelineData) {
                     ${item.isLocked ? '🔒' : '🔓'}
                 </button>
             </td>
-            <td class="font-bold">${item.display}</td>
+            <td class="font-bold">${safeDisplay}</td>
             <td>
                 <input type="number" data-index="${index}" data-field="income" 
-                    value="${item.income}" min="0" step="100" class="timeline-input" 
+                    value="${incomeVal}" min="0" step="100" class="timeline-input" 
                     ${item.isLocked ? 'readonly' : ''}>
             </td>
             <td>
                 <input type="number" data-index="${index}" data-field="expenses" 
-                    value="${item.expenses}" min="0" step="10" class="timeline-input"
+                    value="${expenseVal}" min="0" step="10" class="timeline-input"
                     ${item.isLocked ? 'readonly' : ''}>
             </td>
-            <td class="${balanceClass}">${TIMELINE_CONFIG.currency}${item.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+            <td class="${balanceClass}">${safeCurrency}${item.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
         `;
         tbody.appendChild(row);
     });
@@ -2249,7 +2302,8 @@ function renderMetadataManagers() {
         if (!container) return;
 
         const items = appSettings[type] || [];
-        container.innerHTML = items
+        const safeItems = items.map((item) => escapeHtml(toSafeString(item)));
+        container.innerHTML = safeItems
             .map(
                 (item, index) => `
             <div class="metadata-item">
@@ -2271,7 +2325,7 @@ function renderMetadataManagers() {
                 const currentVal = formSelect.value;
                 formSelect.innerHTML =
                     '<option value="">Select Category</option>' +
-                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
+                    safeItems.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
                 formSelect.value = currentVal;
             }
             // Update Filter Dropdown
@@ -2280,7 +2334,7 @@ function renderMetadataManagers() {
                 const currentVal = filterSelect.value;
                 filterSelect.innerHTML =
                     '<option value="">All</option>' +
-                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
+                    safeItems.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
                 filterSelect.value = currentVal;
             }
         } else if (type === 'statuses') {
@@ -2290,7 +2344,7 @@ function renderMetadataManagers() {
                 const currentVal = formSelect.value;
                 formSelect.innerHTML =
                     '<option value="">Select Status</option>' +
-                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
+                    safeItems.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
                 formSelect.value = currentVal;
             }
             // Update Filter Dropdown
@@ -2299,7 +2353,7 @@ function renderMetadataManagers() {
                 const currentVal = filterSelect.value;
                 filterSelect.innerHTML =
                     '<option value="">All</option>' +
-                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
+                    safeItems.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
                 filterSelect.value = currentVal;
             }
         } else if (type === 'criticalities') {
@@ -2309,7 +2363,7 @@ function renderMetadataManagers() {
                 const currentVal = formSelect.value;
                 formSelect.innerHTML =
                     '<option value="">Select Level</option>' +
-                    items.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
+                    safeItems.map((cat) => `<option value="${cat}">${cat}</option>`).join('');
                 formSelect.value = currentVal;
             }
         }
@@ -2361,10 +2415,45 @@ function editMetadataItem(type, index) {
     const newVal = prompt(`Edit ${type.slice(0, -1)}:`, oldVal);
 
     if (newVal && newVal.trim() !== '' && newVal !== oldVal) {
-        appSettings[type][index] = newVal.trim();
+        const trimmedNewVal = newVal.trim();
+        appSettings[type][index] = trimmedNewVal;
+
+        // Propagate changes to existing accounts
+        let accountsChanged = false;
+        const fieldMap = {
+            categories: 'category',
+            statuses: 'status',
+            criticalities: 'priority',
+        };
+
+        const accountField = fieldMap[type];
+        if (accountField) {
+            accounts.forEach((account) => {
+                if (account[accountField] === oldVal) {
+                    account[accountField] = trimmedNewVal;
+                    accountsChanged = true;
+                }
+            });
+        }
+
         renderMetadataManagers();
         saveSettings();
-        notify('✅ Item updated', NOTIFICATION_TYPES.SUCCESS);
+
+        if (accountsChanged) {
+            saveToIndexedDB(DB_CONFIG.stores.accounts, accounts, 'allAccounts')
+                .then(() => {
+                    renderAccounts();
+                    updateStats();
+                    initCharts();
+                    notify('✅ Item updated and propagated to accounts', NOTIFICATION_TYPES.SUCCESS);
+                })
+                .catch((err) => {
+                    console.error('Error propagating metadata change:', err);
+                    notify('⚠️ Item updated, but failed to update accounts', NOTIFICATION_TYPES.WARNING);
+                });
+        } else {
+            notify('✅ Item updated', NOTIFICATION_TYPES.SUCCESS);
+        }
     }
 }
 
@@ -2378,7 +2467,10 @@ function populateAccountFormDropdowns() {
         catSelect.innerHTML =
             '<option value="">Select Category</option>' +
             (appSettings.categories || [])
-                .map((c) => `<option value="${c}">${c}</option>`)
+                .map((c) => {
+                    const safe = escapeHtml(toSafeString(c));
+                    return `<option value="${safe}">${safe}</option>`;
+                })
                 .join('');
         catSelect.value = current;
     }
@@ -2386,7 +2478,12 @@ function populateAccountFormDropdowns() {
         const current = statusSelect.value;
         statusSelect.innerHTML =
             '<option value="">Select Status</option>' +
-            (appSettings.statuses || []).map((s) => `<option value="${s}">${s}</option>`).join('');
+            (appSettings.statuses || [])
+                .map((s) => {
+                    const safe = escapeHtml(toSafeString(s));
+                    return `<option value="${safe}">${safe}</option>`;
+                })
+                .join('');
         statusSelect.value = current;
     }
     if (critSelect) {
@@ -2394,7 +2491,10 @@ function populateAccountFormDropdowns() {
         critSelect.innerHTML =
             '<option value="">Select Level</option>' +
             (appSettings.criticalities || [])
-                .map((c) => `<option value="${c}">${c}</option>`)
+                .map((c) => {
+                    const safe = escapeHtml(toSafeString(c));
+                    return `<option value="${safe}">${safe}</option>`;
+                })
                 .join('');
         critSelect.value = current;
     }
@@ -2497,50 +2597,6 @@ async function saveSettings() {
     }
 }
 
-// Data Management Functions
-
-function exportData() {
-    fetch(API_URL)
-        .then((res) => res.json())
-        .then((data) => {
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `finance_backup_${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            notify('✅ Backup exported successfully!', NOTIFICATION_TYPES.SUCCESS);
-        })
-        .catch((err) => notify('❌ Export failed', NOTIFICATION_TYPES.ERROR));
-}
-
-function importData(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            // Quick validation
-            if (!data.accounts || !data.profile) throw new Error('Invalid backup format');
-
-            // Overwrite server data
-            const stores = Object.keys(data);
-            const promises = stores.map((store) => saveToIndexedDB(store, data[store]));
-
-            Promise.all(promises).then(() => {
-                notify('✅ Data imported! Reloading...', NOTIFICATION_TYPES.SUCCESS);
-                setTimeout(() => location.reload(), 1500);
-            });
-        } catch (err) {
-            notify('❌ Invalid JSON file', NOTIFICATION_TYPES.ERROR);
-        }
-    };
-    reader.readAsText(file);
-}
-
 function showFactoryResetModal() {
     const modal = document.getElementById('resetModal');
     if (modal) modal.classList.add('active');
@@ -2554,371 +2610,26 @@ function closeResetModal() {
 function confirmFactoryReset() {
     const includeSeed = document.getElementById('includeSeedData').checked;
 
-    // Default empty state
-    const emptyData = {
-        profile: { cards: [] },
-        timeline: { months: [], startingBalance: 0 },
-        settings: DEFAULT_SETTINGS,
-    };
+    const cardsToSave = includeSeed ? GENERIC_SEED_CARDS : [];
+    const accountsToSave = includeSeed ? convertAccountsToObjects(GENERIC_SEED_ACCOUNTS) : [];
 
-    const accountsToSave = includeSeed ? convertAccountsToObjects(SEED_DATA) : [];
+    // Load generic timeline if includeSeed is checked
+    let timelineToSave = { months: [], startingBalance: 0 };
+    if (includeSeed) {
+        const years = getTimelineYears();
+        const baseData = generateMonthData(years);
+        const { totalIncome, totalExpense } = calculateBaseMonthlyValuesFromData(accountsToSave);
 
-    // Load seed cards if includeSeed is checked
-    const cardsToSave = includeSeed
-        ? [
-              {
-                  id: 'card_1769082468127',
-                  type: 'adult',
-                  emoji: '👨',
-                  displayName: 'Dad',
-                  fullName: 'Abir',
-                  dateOfBirth: '1990-09-26',
-                  job: 'Software Consultant and Technical Support Specialist',
-              },
-              {
-                  id: 'card_1769082534972',
-                  type: 'pet',
-                  emoji: '🐕',
-                  displayName: 'Dog',
-                  fullName: 'Nuka',
-                  dateOfBirth: '2023-03-01',
-                  breed: 'German Shepherd/Border Collie',
-              },
-          ]
-        : [];
+        baseData.forEach((m) => {
+            m.income = totalIncome;
+            m.expenses = totalExpense;
+        });
 
-    // Load seed timeline if includeSeed is checked
-    const timelineToSave = includeSeed
-        ? {
-              startingBalance: 100,
-              months: [
-                  {
-                      id: '2025-January',
-                      year: 2025,
-                      month: 'January',
-                      display: '2025 - January',
-                      income: 1800,
-                      expenses: 2000,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-February',
-                      year: 2025,
-                      month: 'February',
-                      display: '2025 - February',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-March',
-                      year: 2025,
-                      month: 'March',
-                      display: '2025 - March',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-April',
-                      year: 2025,
-                      month: 'April',
-                      display: '2025 - April',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-May',
-                      year: 2025,
-                      month: 'May',
-                      display: '2025 - May',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-June',
-                      year: 2025,
-                      month: 'June',
-                      display: '2025 - June',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-July',
-                      year: 2025,
-                      month: 'July',
-                      display: '2025 - July',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-August',
-                      year: 2025,
-                      month: 'August',
-                      display: '2025 - August',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-September',
-                      year: 2025,
-                      month: 'September',
-                      display: '2025 - September',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-October',
-                      year: 2025,
-                      month: 'October',
-                      display: '2025 - October',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-November',
-                      year: 2025,
-                      month: 'November',
-                      display: '2025 - November',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2025-December',
-                      year: 2025,
-                      month: 'December',
-                      display: '2025 - December',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-January',
-                      year: 2026,
-                      month: 'January',
-                      display: '2026 - January',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-February',
-                      year: 2026,
-                      month: 'February',
-                      display: '2026 - February',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-March',
-                      year: 2026,
-                      month: 'March',
-                      display: '2026 - March',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-April',
-                      year: 2026,
-                      month: 'April',
-                      display: '2026 - April',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-May',
-                      year: 2026,
-                      month: 'May',
-                      display: '2026 - May',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-June',
-                      year: 2026,
-                      month: 'June',
-                      display: '2026 - June',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-July',
-                      year: 2026,
-                      month: 'July',
-                      display: '2026 - July',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-August',
-                      year: 2026,
-                      month: 'August',
-                      display: '2026 - August',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-September',
-                      year: 2026,
-                      month: 'September',
-                      display: '2026 - September',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-October',
-                      year: 2026,
-                      month: 'October',
-                      display: '2026 - October',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-November',
-                      year: 2026,
-                      month: 'November',
-                      display: '2026 - November',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2026-December',
-                      year: 2026,
-                      month: 'December',
-                      display: '2026 - December',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-January',
-                      year: 2027,
-                      month: 'January',
-                      display: '2027 - January',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-February',
-                      year: 2027,
-                      month: 'February',
-                      display: '2027 - February',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-March',
-                      year: 2027,
-                      month: 'March',
-                      display: '2027 - March',
-                      income: 1800,
-                      expenses: 1500,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-April',
-                      year: 2027,
-                      month: 'April',
-                      display: '2027 - April',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-May',
-                      year: 2027,
-                      month: 'May',
-                      display: '2027 - May',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-June',
-                      year: 2027,
-                      month: 'June',
-                      display: '2027 - June',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-July',
-                      year: 2027,
-                      month: 'July',
-                      display: '2027 - July',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-August',
-                      year: 2027,
-                      month: 'August',
-                      display: '2027 - August',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-September',
-                      year: 2027,
-                      month: 'September',
-                      display: '2027 - September',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-October',
-                      year: 2027,
-                      month: 'October',
-                      display: '2027 - October',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-November',
-                      year: 2027,
-                      month: 'November',
-                      display: '2027 - November',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-                  {
-                      id: '2027-December',
-                      year: 2027,
-                      month: 'December',
-                      display: '2027 - December',
-                      income: 1700,
-                      expenses: 1140,
-                      isLocked: false,
-                  },
-              ],
-          }
-        : { months: [], startingBalance: 0 };
+        timelineToSave = {
+            startingBalance: TIMELINE_CONFIG.defaultStartingBalance,
+            months: baseData,
+        };
+    }
 
     Promise.all([
         saveToIndexedDB(DB_CONFIG.stores.accounts, accountsToSave, 'allAccounts'),
@@ -2931,14 +2642,6 @@ function confirmFactoryReset() {
         setTimeout(() => location.reload(), 1500);
     });
 }
-const SEED_DATA = [
-    [1, 'Primary Salary', 'Productivity & Work', 'income', 3500, 0, 'No', 'Active', 'Critical'],
-    [2, 'Google Gemini', 'AI Tools', 'expense', 0, 0, 'No', 'Active', 'Optional'],
-    [3, 'Rent', 'Household & Home', 'expense', 1200, 0, 'Yes', 'Active', 'Critical'],
-    [4, 'ChatGPT', 'AI Tools', 'expense', 20, 0, 'No', 'Active', 'Optional'],
-    [5, 'Naturstrom', 'Utilities & Bills', 'expense', 45, 0, 'Yes', 'Active', 'Important'],
-    [6, 'Groceries', 'Food & Dining', 'expense', 400, 0, 'Yes', 'Active', 'Critical'],
-];
 
 function downloadCSV() {
     const headers = [
@@ -3022,22 +2725,29 @@ function renderGoals() {
             etaText = '⚠️ Increase net flow to save';
         }
 
+        const safeGoalName = escapeHtml(toSafeString(goal.name));
+        const safeEtaText = escapeHtml(toSafeString(etaText));
+        const safeGoalCurrency = escapeHtml(toSafeString(TIMELINE_CONFIG.currency));
+        const goalCurrent = sanitizeNumber(goal.current, 0, 1000000000);
+        const goalTarget = sanitizeNumber(goal.target, 0, 1000000000);
+        const safeGoalId = escapeHtml(toSafeString(goal.id));
+
         const goalCard = document.createElement('div');
         goalCard.className = 'goal-card';
         goalCard.innerHTML = `
             <div class="goal-header">
                 <div>
-                    <div class="goal-name">${goal.name}</div>
-                    <div class="goal-eta" style="font-size: 11px; color: #64748b; margin-top: 4px;">${etaText}</div>
+                    <div class="goal-name">${safeGoalName}</div>
+                    <div class="goal-eta" style="font-size: 11px; color: #64748b; margin-top: 4px;">${safeEtaText}</div>
                 </div>
                 <div class="goal-actions">
-                    <button class="btn-icon-tiny" onclick="editGoal('${goal.id}')">✏️</button>
-                    <button class="btn-icon-tiny delete" onclick="deleteGoal('${goal.id}')">🗑️</button>
+                    <button class="btn-icon-tiny" onclick="editGoal('${safeGoalId}')">✏️</button>
+                    <button class="btn-icon-tiny delete" onclick="deleteGoal('${safeGoalId}')">🗑️</button>
                 </div>
             </div>
             <div class="goal-stats">
-                <span>${TIMELINE_CONFIG.currency}${goal.current.toLocaleString()} saved</span>
-                <span>Target: ${TIMELINE_CONFIG.currency}${goal.target.toLocaleString()}</span>
+                <span>${safeGoalCurrency}${goalCurrent.toLocaleString()} saved</span>
+                <span>Target: ${safeGoalCurrency}${goalTarget.toLocaleString()}</span>
             </div>
             <div class="goal-progress-container">
                 <div class="goal-progress-bar ${colorClass}" style="width: ${percentage}%"></div>
@@ -3180,26 +2890,7 @@ initIndexedDB()
                 cards = savedCards;
             } else {
                 // Load defaults if empty (First run only)
-                cards = [
-                    {
-                        id: 'card_1769082468127',
-                        type: 'adult',
-                        emoji: '👨',
-                        displayName: 'Dad',
-                        fullName: 'Abir',
-                        dateOfBirth: '1990-09-26',
-                        job: 'Software Consultant and Technical Support Specialist',
-                    },
-                    {
-                        id: 'card_1769082534972',
-                        type: 'pet',
-                        emoji: '🐕',
-                        displayName: 'Dog',
-                        fullName: 'Nuka',
-                        dateOfBirth: '2023-03-01',
-                        breed: 'German Shepherd/Border Collie',
-                    },
-                ];
+                cards = GENERIC_SEED_CARDS;
                 await saveToIndexedDB(DB_CONFIG.stores.profile, cards, 'cards');
             }
 
@@ -3209,7 +2900,7 @@ initIndexedDB()
                 accounts = savedAccounts;
             } else {
                 // Load defaults if missing (First run only)
-                accounts = convertAccountsToObjects(SEED_DATA);
+                accounts = convertAccountsToObjects(GENERIC_SEED_ACCOUNTS);
                 await saveToIndexedDB(DB_CONFIG.stores.accounts, accounts, 'allAccounts');
             }
 
@@ -3283,3 +2974,9 @@ initIndexedDB()
 
     console.log('Heartbeat initialized: sending every ' + HEARTBEAT_INTERVAL / 1000 + 's');
 })();
+
+
+
+
+
+

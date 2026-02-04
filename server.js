@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { normalizeAccount, normalizeData } = require('./lib/data-utils');
 // const open = require('open'); // Removed to use dynamic import
 
 function getLocalIp() {
@@ -21,7 +22,21 @@ const LOCAL_IP = getLocalIp();
 
 const app = express();
 const PORT = 3000;
-const DATA_FILE = path.join(__dirname, 'data.json');
+const HOST = '127.0.0.1';
+const PUBLIC_DIR = path.join(__dirname, 'public');
+const DATA_DIR = path.join(__dirname, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'data.json');
+const BACKUP_FILE = path.join(DATA_DIR, 'data.backup.json');
+const IMPORT_SAFETY_FILE = path.join(DATA_DIR, 'data.import_safety.json');
+const ALLOWED_STORES = new Set(['accounts', 'profile', 'timeline', 'goals', 'settings']);
+
+let writeQueue = Promise.resolve();
+
+function queueWrite(data) {
+    const payload = JSON.stringify(data, null, 2);
+    writeQueue = writeQueue.then(() => fs.promises.writeFile(DATA_FILE, payload));
+    return writeQueue;
+}
 
 // --- AUTO-SHUTDOWN LOGIC ---
 let shutdownTimer;
@@ -48,11 +63,39 @@ if (!IS_CI) {
 // ---------------------------
 
 // Middleware
-app.use(cors());
+const ALLOWED_ORIGINS = new Set([
+    `http://localhost:${PORT}`,
+    `http://127.0.0.1:${PORT}`,
+]);
+
+app.use(
+    cors({
+        origin(origin, callback) {
+            if (!origin) return callback(null, true);
+            if (ALLOWED_ORIGINS.has(origin)) return callback(null, true);
+            return callback(new Error('Not allowed by CORS'));
+        },
+    })
+);
+
+// Basic same-origin enforcement for write operations
+app.use((req, res, next) => {
+    const isWrite = req.method !== 'GET';
+    if (!isWrite) return next();
+
+    const origin = req.headers.origin;
+    if (!origin || ALLOWED_ORIGINS.has(origin)) return next();
+
+    return res.status(403).json({ error: 'Forbidden origin' });
+});
+
 app.use(bodyParser.json({ limit: '50mb' })); // Increased limit just in case
-app.use(express.static(__dirname)); // Serve static files from current directory
+app.use(express.static(PUBLIC_DIR)); // Serve static files from public directory
 
 // Initialize data.json if it doesn't exist
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 if (!fs.existsSync(DATA_FILE)) {
     const initialData = {
         accounts: [],
@@ -67,9 +110,9 @@ if (!fs.existsSync(DATA_FILE)) {
 // --- AUTO-BACKUP ON STARTUP ---
 try {
     if (fs.existsSync(DATA_FILE)) {
-        const backupPath = path.join(__dirname, 'data.backup.json');
+        const backupPath = BACKUP_FILE;
         fs.copyFileSync(DATA_FILE, backupPath);
-        console.log('✅ Data backup created: data.backup.json');
+        console.log('✅ Data backup created: data/data.backup.json');
     }
 } catch (err) {
     console.warn('⚠️ Failed to create backup:', err.message);
@@ -81,12 +124,14 @@ try {
 app.get('/api/data', (req, res) => {
     try {
         const data = fs.readFileSync(DATA_FILE, 'utf8');
-        res.json(JSON.parse(data));
+        const parsed = JSON.parse(data);
+        const normalized = normalizeData(parsed);
+        res.json(normalized);
     } catch (err) {
         console.error('Error reading/parsing data:', err);
 
         // Attempt to restore from backup
-        const backupPath = path.join(__dirname, 'data.backup.json');
+        const backupPath = BACKUP_FILE;
         if (fs.existsSync(backupPath)) {
             try {
                 console.log('⚠️ Data corrupted. Attempting to restore from backup...');
@@ -115,11 +160,15 @@ app.get('/api/data', (req, res) => {
 });
 
 // Save data (store-based)
-app.post('/api/data', (req, res) => {
+app.post('/api/data', async (req, res) => {
     const { storeName, data, key } = req.body;
 
     if (!storeName) {
         return res.status(400).json({ error: 'storeName is required' });
+    }
+
+    if (!ALLOWED_STORES.has(storeName)) {
+        return res.status(400).json({ error: 'Invalid storeName' });
     }
 
     try {
@@ -139,9 +188,9 @@ app.post('/api/data', (req, res) => {
 
         if (storeName === 'accounts') {
             if (Array.isArray(data)) {
-                dbData[storeName] = data;
+                dbData[storeName] = data.map(normalizeAccount).filter(Boolean);
             } else {
-                dbData[storeName] = data;
+                dbData[storeName] = [];
             }
         } else if (storeName === 'profile' || storeName === 'timeline') {
             if (key) {
@@ -154,7 +203,7 @@ app.post('/api/data', (req, res) => {
             dbData[storeName] = data;
         }
 
-        fs.writeFileSync(DATA_FILE, JSON.stringify(dbData, null, 2));
+        await queueWrite(dbData);
         res.json({ success: true });
     } catch (err) {
         console.error('Error saving data:', err);
@@ -163,7 +212,7 @@ app.post('/api/data', (req, res) => {
 });
 
 // Import data (Overwrite entire database)
-app.post('/api/import', (req, res) => {
+app.post('/api/import', async (req, res) => {
     try {
         const newData = req.body;
 
@@ -173,14 +222,15 @@ app.post('/api/import', (req, res) => {
         }
 
         // Create safety backup before overwriting
-        const safetyBackupPath = path.join(__dirname, 'data.import_safety.json');
+        const safetyBackupPath = IMPORT_SAFETY_FILE;
         if (fs.existsSync(DATA_FILE)) {
             fs.copyFileSync(DATA_FILE, safetyBackupPath);
-            console.log('🛡️ Import safety backup created: data.import_safety.json');
+            console.log('🛡️ Import safety backup created: data/data.import_safety.json');
         }
 
         // Write to disk
-        fs.writeFileSync(DATA_FILE, JSON.stringify(newData, null, 2));
+        const normalized = normalizeData(newData);
+        await queueWrite(normalized);
         console.log('🔄 Database restored from import');
 
         res.json({ message: 'Database restored successfully (Safety backup created)' });
@@ -228,12 +278,12 @@ app.post('/api/tab-closed', (req, res) => {
 });
 
 // Server startup
-app.listen(PORT, async () => {
+app.listen(PORT, HOST, async () => {
     console.log('\x1b[32m%s\x1b[0m', '--------------------------------------------------');
     console.log('\x1b[32m%s\x1b[0m', '🚀 Hawkward Server is running!');
     console.log('\x1b[32m%s\x1b[0m', '--------------------------------------------------');
     console.log(`Local Access:   http://localhost:${PORT}`);
-    console.log(`Network Access: http://${LOCAL_IP}:${PORT}`);
+    console.log(`Network Access: disabled (bound to ${HOST})`);
     console.log('--------------------------------------------------');
     console.log(
         `Auto-shutdown active: Server will exit ${SHUTDOWN_TIMEOUT / 1000}s after tab is closed.`
@@ -251,3 +301,5 @@ app.listen(PORT, async () => {
         console.log('CI environment detected: Skipping browser launch.');
     }
 });
+
+

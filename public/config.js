@@ -98,8 +98,6 @@ const ACCOUNT_TEMPLATES = [
         type: 'expense',
         priority: 'Optional',
     },
-    { name: 'ChatGPT Plus', category: 'AI Tools', type: 'expense', priority: 'Optional' },
-    { name: 'GitHub Copilot', category: 'Developer Tools', type: 'expense', priority: 'Important' },
     { name: 'Salary', category: 'Productivity & Work', type: 'income', priority: 'Critical' },
     {
         name: 'Freelance Income',
@@ -107,6 +105,36 @@ const ACCOUNT_TEMPLATES = [
         type: 'income',
         priority: 'Important',
     },
+];
+
+// Generic Seed Data for Privacy/Defaults
+const GENERIC_SEED_ACCOUNTS = [
+    [1, 'Main Salary', 'Productivity & Work', 'income', 3000, 0, 'No', 'Active', 'Critical'],
+    [2, 'Apartment Rent', 'Household & Home', 'expense', 1000, 0, 'Yes', 'Active', 'Critical'],
+    [3, 'Utility Bundle', 'Utilities & Bills', 'expense', 150, 0, 'Yes', 'Active', 'Important'],
+    [4, 'Grocery Budget', 'Food & Dining', 'expense', 400, 0, 'Yes', 'Active', 'Critical'],
+    [5, 'Personal Streaming', 'Entertainment & Streaming', 'expense', 15, 0, 'Yes', 'Active', 'Optional'],
+];
+
+const GENERIC_SEED_CARDS = [
+    {
+        id: 'card_default_1',
+        type: 'adult',
+        emoji: '👤',
+        displayName: 'Primary User',
+        fullName: 'Jane Doe',
+        dateOfBirth: '1995-01-01',
+        job: 'Professional',
+    },
+    {
+        id: 'card_default_2',
+        type: 'child',
+        emoji: '🧸',
+        displayName: 'Family Member',
+        fullName: 'Alex Doe',
+        dateOfBirth: '2015-06-15',
+        interests: 'Gaming, Science',
+    }
 ];
 
 // Timeline Configuration
